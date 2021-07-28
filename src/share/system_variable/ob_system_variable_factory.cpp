@@ -243,7 +243,8 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_NAME[] = {"_enable_parallel
     "version_compile_machine",
     "version_compile_os",
     "wait_timeout",
-    "warning_count"};
+    "warning_count",
+    "ob_enable_dynamic_sample"};
 
 const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR__ENABLE_PARALLEL_DML,
     SYS_VAR__ENABLE_PARALLEL_QUERY,
@@ -438,7 +439,8 @@ const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR
     SYS_VAR_VERSION_COMPILE_MACHINE,
     SYS_VAR_VERSION_COMPILE_OS,
     SYS_VAR_WAIT_TIMEOUT,
-    SYS_VAR_WARNING_COUNT};
+    SYS_VAR_WARNING_COUNT,
+    SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE};
 
 const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_ID[] = {"auto_increment_increment",
     "auto_increment_offset",
@@ -633,7 +635,8 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_ID[] = {"auto_increment_inc
     "performance_schema",
     "nls_currency",
     "nls_iso_currency",
-    "nls_dual_currency"};
+    "nls_dual_currency",
+    "ob_enable_dynamic_sample"};
 
 bool ObSysVarFactory::sys_var_name_case_cmp(const char* name1, const ObString& name2)
 {
@@ -2955,7 +2958,18 @@ int ObSysVarFactory::create_sys_var(ObSysVarClassType sys_var_id, ObBasicSysVar*
         }
         break;
       }
-
+      case SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE: {
+        void* ptr = NULL;
+        if (OB_ISNULL(ptr = allocator_.alloc(sizeof(ObSysVarObEnableDynamicSample)))) {
+          ret = OB_ALLOCATE_MEMORY_FAILED;
+          LOG_ERROR("fail to alloc memory", K(ret), K(sizeof(ObSysVarObEnableDynamicSample)));
+        } else if (OB_ISNULL(sys_var_ptr = new (ptr) ObSysVarObEnableDynamicSample())) {
+          ret = OB_ALLOCATE_MEMORY_FAILED;
+          LOG_ERROR("fail to new ObSysVarObEnableDynamicSample", K(ret));
+        }
+        break;
+      }
+      
       default: {
         ret = OB_ERR_UNEXPECTED;
         LOG_ERROR("invalid system variable id", K(ret), K(sys_var_id));
