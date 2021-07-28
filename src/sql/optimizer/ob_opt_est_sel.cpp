@@ -451,6 +451,9 @@ int ObOptEstSel::get_equal_sel(const ObEstSelInfo& est_sel_info, const ObRawExpr
     LOG_WARN("Failed to get equal sel", K(ret));
   } else {
   }  // do nothing
+  if (selectivity == DEFAULT_EQ_SEL){
+    clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
+  }
   return ret;
 }
 
@@ -657,6 +660,9 @@ int ObOptEstSel::get_ne_sel(const ObEstSelInfo& est_sel_info, const ObRawExpr& q
     }
   } else {
   }  // do nothing
+  if (selectivity == DEFAULT_SEL){
+    clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
+  }
   return ret;
 }
 
@@ -694,6 +700,7 @@ int ObOptEstSel::get_like_sel(const ObEstSelInfo& est_sel_info, const ObRawExpr&
       if (static_cast<const ObColumnRefRawExpr*>(col_expr)->is_lob_column()) {
         // there's no statistic for lob type, use default selectivity
         selectivity = DEFAULT_CLOB_LIKE_SEL;
+        clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
       } else if (OB_FAIL(ObOptEstUtils::if_expr_start_with_patten_sign(params,
                      const_expr,
                      escape_expr,
@@ -703,6 +710,7 @@ int ObOptEstSel::get_like_sel(const ObEstSelInfo& est_sel_info, const ObRawExpr&
         LOG_WARN("failed to check if expr start with percent sign", K(ret));
       } else if (is_start_with) {
         selectivity = DEFAULT_INEQ_SEL;
+        clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
       } else if (OB_FAIL(get_column_range_sel(
                      est_sel_info, static_cast<const ObColumnRefRawExpr&>(*col_expr), qual, true, selectivity, true))) {
         LOG_WARN("Failed to get column range selectivity", K(ret));
@@ -710,6 +718,7 @@ int ObOptEstSel::get_like_sel(const ObEstSelInfo& est_sel_info, const ObRawExpr&
     }
   } else {
     selectivity = DEFAULT_SEL;
+    clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
   }
   return ret;
 }
@@ -743,6 +752,7 @@ int ObOptEstSel::get_btw_or_not_sel(const ObEstSelInfo& est_sel_info, const ObRa
       col_expr = r_expr;
     } else {
       selectivity = DEFAULT_SEL;
+      clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
     }
     if (NULL != col_expr) {
       if (OB_FAIL(get_column_range_sel(
@@ -1238,6 +1248,9 @@ int ObOptEstSel::get_range_cmp_sel(const ObEstSelInfo& est_sel_info, const ObRaw
     }
   } else {
     selectivity = DEFAULT_INEQ_SEL;
+  }
+  if (selectivity == DEFAULT_INEQ_SEL){
+    clause_selectivity_by_dynamic_sample(est_sel_info, &qual, selectivity);
   }
   return ret;
 }
@@ -3608,6 +3621,7 @@ int ObOptEstSel::is_valid_multi_join(ObIArray<ObRawExpr*>& quals, bool& is_valid
 int ObOptEstSel::clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObRawExpr* qual, double& selectivity){
   int ret = OB_SUCCESS;
   ObOptSampleService* service = NULL;
+  LOG_INFO("use dynamic sample", K(qual));
   if (OB_UNLIKELY(OB_ISNULL(est_sel_info.get_opt_ctx().get_sample_service()))){
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
