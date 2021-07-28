@@ -2293,7 +2293,7 @@ static struct VarsInit {
   }
 } vars_init;
 
-static int64_t var_amount = 194;
+static int64_t var_amount = 195;
 
 int64_t ObSysVariables::get_all_sys_var_count()
 {

@@ -144,6 +144,7 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_NAME[] = {"_enable_parallel
     "ob_enable_aggregation_pushdown",
     "ob_enable_batched_multi_statement",
     "ob_enable_blk_nestedloop_join",
+    "ob_enable_dynamic_sample",
     "ob_enable_hash_group_by",
     "ob_enable_index_direct_select",
     "ob_enable_jit",
@@ -243,8 +244,7 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_NAME[] = {"_enable_parallel
     "version_compile_machine",
     "version_compile_os",
     "wait_timeout",
-    "warning_count",
-    "ob_enable_dynamic_sample"};
+    "warning_count"};
 
 const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR__ENABLE_PARALLEL_DML,
     SYS_VAR__ENABLE_PARALLEL_QUERY,
@@ -340,6 +340,7 @@ const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR
     SYS_VAR_OB_ENABLE_AGGREGATION_PUSHDOWN,
     SYS_VAR_OB_ENABLE_BATCHED_MULTI_STATEMENT,
     SYS_VAR_OB_ENABLE_BLK_NESTEDLOOP_JOIN,
+    SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE,
     SYS_VAR_OB_ENABLE_HASH_GROUP_BY,
     SYS_VAR_OB_ENABLE_INDEX_DIRECT_SELECT,
     SYS_VAR_OB_ENABLE_JIT,
@@ -439,8 +440,7 @@ const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR
     SYS_VAR_VERSION_COMPILE_MACHINE,
     SYS_VAR_VERSION_COMPILE_OS,
     SYS_VAR_WAIT_TIMEOUT,
-    SYS_VAR_WARNING_COUNT,
-    SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE};
+    SYS_VAR_WARNING_COUNT};
 
 const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_ID[] = {"auto_increment_increment",
     "auto_increment_offset",
