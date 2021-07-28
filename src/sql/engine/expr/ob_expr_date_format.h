@@ -20,7 +20,7 @@
 namespace oceanbase {
 namespace sql {
 class ObExprDateFormat : public ObStringExprOperator {
-  public:
+public:
   explicit ObExprDateFormat(common::ObIAllocator& alloc);
   virtual ~ObExprDateFormat();
   virtual int calc_result_type2(
@@ -31,7 +31,7 @@ class ObExprDateFormat : public ObStringExprOperator {
   static int calc_date_format(const ObExpr& expr, ObEvalCtx& ctx, ObDatum& expr_datum);
   static int calc_date_format_invalid(const ObExpr& expr, ObEvalCtx& ctx, ObDatum& expr_datum);
 
-  private:
+private:
   // disallow copy
   DISALLOW_COPY_AND_ASSIGN(ObExprDateFormat);
 
@@ -65,12 +65,11 @@ inline int ObExprDateFormat::calc_result_type2(
     // for enum or set obj, we need calc type
     if (ob_is_enum_or_set_type(date.get_type())) {
       date.set_calc_type(common::ObVarcharType);
+    } else if (ob_is_double_tc(date.get_type()) || ob_is_float_tc(date.get_type())) {
+      date.set_calc_type(common::ObNumberType);
     }
     if (ob_is_enum_or_set_type(format.get_type())) {
       format.set_calc_type(common::ObVarcharType);
-    }
-    if (ob_is_double_tc(date.get_type()) || ob_is_float_tc(date.get_type()) || ob_is_number_tc(date.get_type())) {
-      date.set_calc_type(common::ObVarcharType);
     }
   }
 

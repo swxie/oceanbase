@@ -65,7 +65,7 @@ class ObPartitionStore {
   friend class ObPGStorage;
   friend class ObPartitionStorage;
 
-  public:
+public:
   typedef common::hash::ObCuckooHashMap<uint64_t, ObMultiVersionTableStore*> TableStoreMap;
   typedef TableStoreMap* TableStoreMapPtr;
   static const int64_t TABLE_STORE_BUCKET_NUM = 2;
@@ -140,8 +140,8 @@ class ObPartitionStore {
   int check_ready_for_read(const uint64_t table_id, bool& is_raedy);
   int check_major_merge_finished(const common::ObVersion& version, bool& finished);
   int check_need_report(const common::ObVersion& version, bool& need_report);
-  int check_all_merged(
-      memtable::ObMemtable& memtable, const int64_t schema_version, bool& is_all_merged, bool& can_release);
+  int check_all_merged(memtable::ObMemtable& memtable, const int64_t schema_version, const bool is_physical_restore,
+      bool& is_all_merged, bool& can_release);
   int64_t get_multi_version_start();
 
   int get_replay_tables(const uint64_t table_id, ObIArray<ObITable::TableKey>& replay_tables);
@@ -179,7 +179,7 @@ class ObPartitionStore {
 
   TO_STRING_KV(K_(is_inited), K_(log_seq_num), "meta", *meta_);
 
-  private:
+private:
   int create_partition_store(const ObPGPartitionStoreMeta& meta, const bool write_slog, ObIPartitionGroup* pg,
       ObFreezeInfoSnapshotMgr& freeze_info_mgr, ObPGMemtableMgr* pg_memtable_mgr);
   int init(const ObPGPartitionStoreMeta& meta, ObIPartitionGroup* pg, ObFreezeInfoSnapshotMgr& freeze_info_mgr);
@@ -227,8 +227,8 @@ class ObPartitionStore {
   int write_report_status(const ObReportStatus& status, const uint64_t data_table_id, const bool write_slog);
   int remove_old_table_(const common::ObVersion& kept_min_version, const int64_t multi_version_start,
       const int64_t kept_major_num, const int64_t backup_snapshot_version, ObMultiVersionTableStore& table_store);
-  int get_index_status(const int64_t schema_version, common::ObIArray<share::schema::ObIndexTableStat>& index_status,
-      common::ObIArray<uint64_t>& deleted_index_ids);
+  int get_index_status(const int64_t schema_version, const bool is_physical_restore,
+      common::ObIArray<share::schema::ObIndexTableStat>& index_status, common::ObIArray<uint64_t>& deleted_index_ids);
   int release_head_memtable(memtable::ObMemtable* memtable);
   int check_table_store_exist_nolock(const uint64_t index_id, bool& exist, ObMultiVersionTableStore*& got_table_store);
   int check_table_store_exist_with_lock(
@@ -285,6 +285,7 @@ class ObPartitionStore {
   int inner_physical_flashback(
       const bool is_data_table, const int64_t flashback_scn, ObMultiVersionTableStore* multi_table_store);
 
+  int remove_unneed_store_within_trans(const TableStoreMap &new_store_map);
   void replace_store_map(TableStoreMap& store_map);
   int prepare_new_store_map(const ObTablesHandle& sstables, const int64_t max_kept_major_version_number,
       const bool need_reuse_local_minor, TableStoreMap*& new_store_map);
@@ -300,7 +301,7 @@ class ObPartitionStore {
   int get_restore_point_normal_tables_(const int64_t snapshot_version, const int64_t publish_version,
       ObRecoveryPointSchemaFilter& schema_filter, ObTablesHandle& handle, bool& is_ready);
 
-  private:
+private:
   bool is_inited_;
   bool is_removed_;
   ObPGPartitionStoreMeta meta_buf_[2];

@@ -382,7 +382,7 @@ DEFINE_ORACLE_ERROR(OB_ERR_DIVISOR_IS_ZERO, -4333,-1, "HY000", "divisor is equal
 DEFINE_ERROR(OB_ERR_AES_IV_LENGTH, -4336, ER_AES_INVALID_IV, "HY000", "The initialization vector supplied to aes_encrypt is too short. Must be at least 16 bytes long");
 DEFINE_ERROR(OB_STORE_DIR_ERROR, -4337, -1, "HY000", "store directory structure error");
 DEFINE_ERROR(OB_OPEN_TWICE, -4338, -1, "HY000", "open twice");
-DEFINE_ERROR(OB_RAID_SUPER_BLOCK_NOT_MACTH, -4339, -1, "HY000", "raid super block not match");
+DEFINE_ERROR(OB_RAID_SUPER_BLOCK_NOT_MATCH, -4339, -1, "HY000", "raid super block not match");
 DEFINE_ERROR(OB_NOT_OPEN, -4340, -1, "HY000", "not opened");
 DEFINE_ERROR(OB_NOT_IN_SERVICE, -4341, -1, "HY000", "target module is not in service");
 DEFINE_ERROR(OB_RAID_DISK_NOT_NORMAL, -4342, -1, "HY000", "raid disk not in normal status");
@@ -1284,7 +1284,7 @@ DEFINE_ORACLE_ERROR(OB_ROWID_VIEW_NO_KEY_PRESERVED, -5902, -1, "HY000", "cannot 
 DEFINE_ORACLE_ERROR(OB_ROWID_VIEW_HAS_DISTINCT_ETC, -5903, -1, "HY000", "cannot select ROWID from, or sample, a view with DISTINCT, GROUP BY, etc", 1446, "cannot select ROWID from, or sample, a view with DISTINCT, GROUP BY, etc");
 DEFINE_ORACLE_ERROR(OB_ERR_AT_LEAST_ONE_COLUMN_NOT_VIRTUAL, -5904, -1, "HY000", "table must have at least 1 column that is not virtual", 54037, "table must have at least 1 column that is not virtual");
 DEFINE_ORACLE_ERROR(OB_ERR_ONLY_PURE_FUNC_CANBE_INDEXED, -5905, -1, "HY000", "only pure functions can be indexed", 1743, "only pure functions can be indexed");
-DEFINE_ORACLE_ERROR(OB_ERR_ONLY_PURE_FUNC_CANBE_VIRTUAL_COLUMN_EXPRESSION, -5906, -1, "HY000", "only pure functions can be specified in a virtual column expression", 54002, "only pure functions can be specified in a virtual column expression");
+DEFINE_ORACLE_ERROR(OB_ERR_ONLY_PURE_FUNC_CANBE_VIRTUAL_COLUMN_EXPRESSION, -5906, -1, "HY000", "Expression of generated column contains a disallowed function", 54002, "only pure functions can be specified in a virtual column expression");
 DEFINE_ORACLE_ERROR(OB_ERR_UPDATE_OPERATION_ON_VIRTUAL_COLUMNS, -5907, -1, "HY000", "UPDATE operation disallowed on virtual columns", 54017, "UPDATE operation disallowed on virtual columns");
 DEFINE_ORACLE_ERROR(OB_ERR_INVALID_COLUMN_EXPRESSION, -5908, -1, "HY000", "Invalid column expression was specified", 54016, "Invalid column expression was specified");
 DEFINE_ORACLE_ERROR(OB_ERR_IDENTITY_COLUMN_COUNT_EXCE_LIMIT, -5909, -1, "HY000", "table can have only one identity column", 30669, "table can have only one identity column");
@@ -1520,6 +1520,7 @@ DEFINE_ERROR(OB_CANCEL_DELETE_BACKUP_NOT_ALLOWED, -9053, -1, "HY000", "cancel de
 DEFINE_ERROR(OB_BACKUP_CLEAN_INFO_NOT_EXIST, -9054, -1, "HY000", "backup clean info not exists");
 DEFINE_ERROR_EXT(OB_ERR_DROP_TRUNCATE_PARTITION_REBUILD_INDEX, -9055, -1, "HY000", "rebuild global index failed when drop/truncate partitions", "rebuild global index:'%.*s' failed when drop/truncate partitions");
 DEFINE_ORACLE_ERROR(OB_ERR_ATLER_TABLE_ILLEGAL_FK, -9056, -1, "HY000", "unique/primary keys in table referenced by enabled foreign keys", 02266, "unique/primary keys in table referenced by enabled foreign keys");
+DEFINE_ERROR(OB_IO_LIMIT, -9061, -1, "HY000", "IO limit");
 
 ////////////////////////////////////////////////////////////////
 //error code for STORAGE3.0 -9100 ~

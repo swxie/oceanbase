@@ -70,13 +70,13 @@ enum ObFetchLogExecuteType {
 };
 
 class ObILogSWForCasMgr {
-  public:
+public:
   ObILogSWForCasMgr()
   {}
   virtual ~ObILogSWForCasMgr()
   {}
 
-  public:
+public:
   virtual int get_next_replay_log_timestamp(int64_t& next_replay_log_timestamp) const = 0;
   virtual void get_next_replay_log_id_info(uint64_t& next_log_id, int64_t& next_log_ts) const = 0;
   virtual uint64_t get_next_index_log_id() const = 0;
@@ -84,13 +84,13 @@ class ObILogSWForCasMgr {
 };
 
 class ObILogSWForStateMgr {
-  public:
+public:
   ObILogSWForStateMgr()
   {}
   virtual ~ObILogSWForStateMgr()
   {}
 
-  public:
+public:
   virtual uint64_t get_start_id() const = 0;
   virtual uint64_t get_max_log_id() const = 0;
   virtual int clean_log() = 0;
@@ -99,7 +99,6 @@ class ObILogSWForStateMgr {
   virtual void start_fetch_log_from_leader(bool& is_fetched) = 0;
   virtual int get_next_replay_log_timestamp(int64_t& next_replay_log_timestamp) const = 0;
   virtual uint64_t get_next_index_log_id() const = 0;
-  virtual int64_t get_next_index_log_ts() = 0;
   virtual int leader_active() = 0;
   virtual int leader_takeover() = 0;
   virtual int leader_revoke() = 0;
@@ -111,13 +110,13 @@ class ObILogSWForStateMgr {
 };
 
 class ObILogSWForReconfirm {
-  public:
+public:
   ObILogSWForReconfirm()
   {}
   virtual ~ObILogSWForReconfirm()
   {}
 
-  public:
+public:
   virtual uint64_t get_start_id() const = 0;
   virtual uint64_t get_max_log_id() const = 0;
   virtual int try_update_max_log_id(const uint64_t log_id) = 0;
@@ -129,16 +128,17 @@ class ObILogSWForReconfirm {
   virtual int try_update_submit_timestamp(const int64_t base_ts) = 0;
   virtual int64_t get_last_submit_timestamp() const = 0;
   virtual uint64_t get_max_confirmed_log_id() const = 0;
+  virtual bool is_empty() const = 0;
 };
 
 class ObILogSWForMS {
-  public:
+public:
   ObILogSWForMS()
   {}
   virtual ~ObILogSWForMS()
   {}
 
-  public:
+public:
   virtual uint64_t get_start_id() const = 0;
   virtual int submit_log(const ObLogEntryHeader& header, const char* buff, ObISubmitLogCb* cb) = 0;
   virtual int submit_log(const ObLogType& log_type, const char* buff, const int64_t size, const int64_t base_timestamp,
@@ -151,7 +151,6 @@ class ObILogSWForMS {
       const bool is_batch_commited) = 0;
   virtual int alloc_log_id(const int64_t base_timestamp, uint64_t& log_id, int64_t& submit_timestamp) = 0;
   virtual uint64_t get_next_index_log_id() const = 0;
-  virtual int64_t get_next_index_log_ts() = 0;
   virtual int do_fetch_log(const uint64_t start_id, const uint64_t end_id,
       const enum ObFetchLogExecuteType& fetch_log_execute_type, bool& is_fetched) = 0;
   virtual int set_log_confirmed(const uint64_t log_id, const bool batch_committed) = 0;
@@ -270,7 +269,7 @@ struct FakeAckInfo {
 };
 
 class FakeAckInfoMgr {
-  public:
+public:
   FakeAckInfoMgr() : lock_()
   {
     reset();
@@ -348,7 +347,7 @@ class FakeAckInfoMgr {
     return need_revoke;
   }
 
-  private:
+private:
   mutable common::ObSpinLock lock_;
   uint64_t log_id_;
   FakeAckInfo ack_info_[common::OB_MAX_MEMBER_NUMBER];
@@ -361,14 +360,14 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
                            public ObILogTaskCallBack {
   friend class unittest::TestSlidingWindow;
 
-  public:
+public:
   ObLogSlidingWindow();
   virtual ~ObLogSlidingWindow()
   {
     destroy();
   }
 
-  public:
+public:
   int init(ObLogReplayEngineWrapper* replay_engine, ObILogEngine* log_engine, ObILogStateMgrForSW* state_mgr,
       ObILogMembershipMgr* mm, ObLogCascadingMgr* cascading_mgr, storage::ObPartitionService* partition_service,
       common::ObILogAllocator* alloc_mgr, ObILogChecksum* checksum, ObILogCallbackEngine* cb_engine,
@@ -378,39 +377,39 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   void set_next_replay_log_id_info(const uint64_t log_id, const int64_t log_ts);
   void try_update_next_replay_log_info(const uint64_t log_id, const int64_t log_ts, const bool is_nop_log = false);
   void try_update_next_replay_log_info_on_leader(const int64_t log_ts);
-  uint64_t get_start_id() const;
+  uint64_t get_start_id() const override;
   void get_max_log_id_info(uint64_t& max_log_id, int64_t& max_log_ts) const;
-  uint64_t get_max_log_id() const;
+  uint64_t get_max_log_id() const override;
   int get_switchover_info(int64_t& switchover_epoch, uint64_t& leader_max_log_id, int64_t& leader_next_log_ts) const;
   uint64_t get_max_timestamp() const;
-  int64_t get_epoch_id() const;
-  int try_update_max_log_id(const uint64_t log_id);
+  int64_t get_epoch_id() const override;
+  int try_update_max_log_id(const uint64_t log_id) override;
   int submit_log(const ObLogType& log_type, const char* buff, const int64_t size, const int64_t base_timestamp,
-      const bool is_trans_log, ObISubmitLogCb* cb, uint64_t& log_id, int64_t& log_timestamp);
+      const bool is_trans_log, ObISubmitLogCb* cb, uint64_t& log_id, int64_t& log_timestamp) override;
   int submit_aggre_log(ObAggreBuffer* buffer, const int64_t base_timestamp);
-  int submit_log(const ObLogEntryHeader& header, const char* buff, ObISubmitLogCb* cb);
-  int append_disk_log(
-      const ObLogEntry& log, const ObLogCursor& log_cursor, const int64_t accum_checksum, const bool batch_committed);
-  int receive_log(
-      const ObLogEntry& log_entry, const common::ObAddr& server, const int64_t cluster_id, const ReceiveLogType type);
-  int receive_recovery_log(
-      const ObLogEntry& log_entry, const bool is_confirmed, const int64_t accum_checksum, const bool is_batch_commited);
+  int submit_log(const ObLogEntryHeader& header, const char* buff, ObISubmitLogCb* cb) override;
+  int append_disk_log(const ObLogEntry& log, const ObLogCursor& log_cursor, const int64_t accum_checksum,
+      const bool batch_committed) override;
+  int receive_log(const ObLogEntry& log_entry, const common::ObAddr& server, const int64_t cluster_id,
+      const ReceiveLogType type) override;
+  int receive_recovery_log(const ObLogEntry& log_entry, const bool is_confirmed, const int64_t accum_checksum,
+      const bool is_batch_commited) override;
   int ack_log(const uint64_t log_id, const common::ObAddr& server, bool& majority);
   int standby_ack_log(const uint64_t log_id, const ObAddr& server, bool& majority);
   int fake_ack_log(const uint64_t log_id, const common::ObAddr& server, const int64_t receive_ts);
-  bool is_fake_info_need_revoke(const uint64_t log_id, const int64_t current_time);
-  int restore_leader_try_confirm_log();
+  bool is_fake_info_need_revoke(const uint64_t log_id, const int64_t current_time) override;
+  int restore_leader_try_confirm_log() override;
   void start_fetch_log_from_leader(bool& is_fetched) override;
-  int get_log_task(const uint64_t log_id, ObLogTask*& log_task, const int64_t*& ref) const;
+  int get_log_task(const uint64_t log_id, ObLogTask*& log_task, const int64_t*& ref) const override;
   int check_left_bound_empty(bool& is_empty);
-  int revert_log_task(const int64_t* ref);
+  int revert_log_task(const int64_t* ref) override;
   int get_log(const uint64_t log_id, const uint32_t log_attr, bool& log_confirmed, ObLogCursor& cursor,
       int64_t& accum_checksum, bool& batch_committed);
-  int clean_log();
+  int clean_log() override;
   int process_sync_standby_max_confirmed_id(const uint64_t standby_max_confirmed_id, const uint64_t reconfirm_next_id);
   int set_log_flushed_succ(const uint64_t log_id, const common::ObProposalID proposal_id, const ObLogCursor& log_cursor,
       const int64_t after_consume_timestamp, bool& majority);
-  int set_log_confirmed(const uint64_t log_id, const bool batch_committed);
+  int set_log_confirmed(const uint64_t log_id, const bool batch_committed) override;
   int receive_confirmed_info(const uint64_t log_id, const ObConfirmedInfo& confirmed_info, const bool batch_committed);
   int majority_cb(const uint64_t log_id, const bool batch_committed, const bool batch_first_participant);
   inline void advance_leader_ts(const int64_t ts)
@@ -420,31 +419,27 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
       ATOMIC_STORE(&leader_ts_, ts);
     }
   }
-  int sliding_cb(const int64_t sn, const ObILogExtRingBufferData* data);
-  uint64_t get_next_index_log_id() const
+  int sliding_cb(const int64_t sn, const ObILogExtRingBufferData* data) override;
+  uint64_t get_next_index_log_id() const override
   {
     return ATOMIC_LOAD(&next_index_log_id_);
   }
-  int64_t get_next_index_log_ts()
-  {
-    return ATOMIC_LOAD(&next_index_log_ts_);
-  }
-  int submit_replay_task(const bool need_async, bool& is_replayed, bool& is_replay_failed);
+  int submit_replay_task(const bool need_async, bool& is_replayed, bool& is_replay_failed) override;
   void destroy();
-  int alloc_log_id(const int64_t base_timestamp, uint64_t& log_id, int64_t& submit_timestamp);
+  int alloc_log_id(const int64_t base_timestamp, uint64_t& log_id, int64_t& submit_timestamp) override;
   int get_next_timestamp(const uint64_t last_log_id, int64_t& res_ts);
   int get_next_served_log_info_by_next_replay_log_info(uint64_t& next_served_log_id, int64_t& next_served_log_ts);
   bool is_inited() const
   {
     return is_inited_;
   }
-  bool is_empty() const;
+  bool is_empty() const override;
   int set_next_index_log_id(const uint64_t log_id, const int64_t accum_checksum);
-  uint64_t get_max_confirmed_log_id() const;
+  uint64_t get_max_confirmed_log_id() const override;
   bool check_can_receive_larger_log(const uint64_t log_id);
   int truncate_first_stage(const common::ObBaseStorageInfo& base_storage_info);
   int truncate_second_stage(const common::ObBaseStorageInfo& base_storage_info);
-  int64_t get_last_submit_timestamp() const
+  int64_t get_last_submit_timestamp() const override
   {
     return last_replay_log_.get_ts();
   }
@@ -452,8 +447,8 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   {
     last_replay_log_.get(log_id, ts);
   }
-  int get_next_replay_log_timestamp(int64_t& next_replay_log_timestamp) const;
-  void get_next_replay_log_id_info(uint64_t& next_log_id, int64_t& next_log_ts) const;
+  int get_next_replay_log_timestamp(int64_t& next_replay_log_timestamp) const override;
+  void get_next_replay_log_id_info(uint64_t& next_log_id, int64_t& next_log_ts) const override;
   int follower_update_leader_next_log_info(const uint64_t leader_next_log_id, const int64_t leader_next_log_ts);
   int follower_update_leader_max_log_info(
       const int64_t switchover_epoch, const uint64_t leader_max_log_id, const int64_t leader_next_log_ts);
@@ -495,12 +490,12 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
     ATOMIC_STORE(&has_pop_task_, false);
     return common::OB_SUCCESS;
   }
-  int leader_active();
-  int leader_takeover();
-  int leader_revoke();
+  int leader_active() override;
+  int leader_takeover() override;
+  int leader_revoke() override;
   int get_replica_replay_type(ObReplicaReplayType& replay_type) const;
   // is_meta_log: log type that need been replayed by D replica and log replica
-  int check_is_meta_log(const common::ObPartitionKey& pkey, uint64_t log_id, bool& is_meta_log, int64_t& log_ts,
+  int get_log_meta_info(uint64_t log_id, bool& is_meta_log, int64_t& log_ts, int64_t& next_replay_log_ts_for_rg,
       int64_t& accum_checksum, ObLogType& log_type) const;
   void destroy_aggre_buffer();
   uint64_t get_leader_max_unconfirmed_log_count();
@@ -539,7 +534,7 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   int check_if_all_log_replayed(bool& has_replayed) const;
   int try_freeze_aggre_buffer();
 
-  private:
+private:
   int alloc_log_id_ts_(const int64_t base_timestamp, uint64_t& log_id, int64_t& submit_timestamp);
   int alloc_log_id_ts_(
       const int64_t base_timestamp, const int64_t size, uint64_t& log_id, int64_t& submit_timestamp, int64_t& offset);
@@ -548,11 +543,19 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
       const int64_t submit_timestamp, ObISubmitLogCb* cb);
   int try_freeze_aggre_buffer_(const uint64_t log_id);
   int submit_freeze_aggre_buffer_task_(const uint64_t log_id);
-  int submit_aggre_log_(ObAggreBuffer* buffer, const uint64_t log_id, const int64_t submit_timestamp);
+  int submit_aggre_log_(ObAggreBuffer *buffer,
+                        const uint64_t log_id,
+                        const int64_t submit_timestamp);
   int try_update_submit_timestamp(const int64_t base_ts);
-  bool is_confirm_match_(const uint64_t log_id, const int64_t log_data_checksum, const int64_t log_epoch_id,
-      const int64_t confirmed_info_data_checksum, const int64_t confirmed_info_epoch_id);
-  int receive_log_(const ObLogEntry& log_entry, const common::ObAddr& server, const int64_t cluster_id);
+  bool is_confirm_match_(const uint64_t log_id,
+                         const int64_t log_data_checksum,
+                         const int64_t log_epoch_id,
+                         const int64_t log_submit_timestamp,
+                         const int64_t confirmed_info_data_checksum,
+                         const int64_t confirmed_info_epoch_id,
+                         const int64_t confirmed_info_submit_timestamp);
+  int receive_log_(const ObLogEntry &log_entry, const common::ObAddr &server,
+                   const int64_t cluster_id);
   void update_max_log_id_(const uint64_t log_id);
   int submit_to_sliding_window_(const ObLogEntryHeader& header, const char* buff, ObISubmitLogCb* cb,
       const bool need_replay, const bool send_slave, const common::ObAddr& server, const int64_t cluster_id,
@@ -608,7 +611,7 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   int handle_succeeding_index_log_(const uint64_t log_id, const bool need_check_succeeding_log, const bool do_pop);
 
   int submit_index_log_(const uint64_t log_id, const ObLogTask* log_task, int64_t& accum_checksum);
-  bool test_and_set_index_log_submitted_(ObLogTask* log_task);
+  bool test_and_set_index_log_submitted_(const uint64_t log_id, ObLogTask* log_task);
   bool test_and_submit_index_log_(const uint64_t log_id, ObLogTask* log_task, int& ret);
   int try_submit_mc_success_cb_(const ObLogType& log_type, const uint64_t log_id, const char* log_buf,
       const int64_t log_buf_len, const common::ObProposalID& proposal_id);
@@ -639,9 +642,9 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   bool check_need_fetch_log_(const uint64_t start_log_id, bool& need_check_rebuild);
   int follower_check_need_rebuild_(const uint64_t start_log_id);
 
-  private:
+private:
   static const int64_t MAX_TIME_DIFF_BETWEEN_SERVER = T_ST;  // 200 ms
-  private:
+private:
   int64_t tenant_id_;
   ObILogStateMgrForSW* state_mgr_;
   ObLogReplayEngineWrapper* replay_engine_;
@@ -664,13 +667,13 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
   uint64_t next_index_log_id_;
   uint64_t scan_next_index_log_id_;
   uint64_t last_flushed_log_id_;
-  int64_t next_index_log_ts_;
   mutable common::ObSpinLock switchover_info_lock_;  // protect leader_max_log_info_
   LeaderMaxLogInfo leader_max_log_info_;
   LogIdTsPair last_replay_log_;
   FakeAckInfoMgr fake_ack_info_mgr_;
   file_id_t last_slide_fid_;
   mutable int64_t check_can_receive_larger_log_warn_time_;
+  mutable int64_t set_index_log_submitted_debug_time_;
   mutable int64_t insert_log_try_again_warn_time_;
   mutable int64_t receive_confirmed_info_warn_time_;
   mutable int64_t get_end_log_id_warn_time_;
@@ -699,7 +702,7 @@ class ObLogSlidingWindow : public ObILogSWForCasMgr,
 
   bool is_inited_;
 
-  private:
+private:
   DISALLOW_COPY_AND_ASSIGN(ObLogSlidingWindow);
 };
 

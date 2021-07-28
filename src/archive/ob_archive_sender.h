@@ -27,7 +27,7 @@ class ObArchiveMgr;
 struct ObArchiveSendTaskStatus;
 typedef common::ObSEArray<ObArchiveSendTask*, 1000> SendTaskArray;
 class ObArchiveSender : public ObArchiveThreadPool {
-  public:
+public:
   // Thread num in mini mode
   static const int64_t MINI_MODE_SENDER_THREAD_NUM = 1;
 
@@ -43,11 +43,11 @@ class ObArchiveSender : public ObArchiveThreadPool {
   static const int64_t MAX_CONVERGE_TASK_COUNT = 20 * 1000;
   static const int64_t MAX_CONVERGE_TASK_SIZE = 8 * 1024 * 1024L;
 
-  public:
+public:
   ObArchiveSender();
   ~ObArchiveSender();
 
-  public:
+public:
   int start();
   void stop();
   void wait();
@@ -70,8 +70,10 @@ class ObArchiveSender : public ObArchiveThreadPool {
   void set_thread_name_str(char* str);
   int handle_task_list(ObArchiveTaskStatus* task_status);
 
-  private:
-  bool is_io_error_(const int ret_code);
+private:
+  // void run1();
+  // void do_thread_task_();
+  // int handle_task_list_(ObArchiveSendTaskStatus &task_status);
   bool is_not_leader_error_(const int ret_code);
 
   int try_retire_task_status_(ObArchiveSendTaskStatus& task_status);
@@ -119,7 +121,7 @@ class ObArchiveSender : public ObArchiveThreadPool {
   typedef common::SpinRWLock RWLock;
   typedef common::SpinWLockGuard WLockGuard;
 
-  private:
+private:
   int64_t log_archive_round_;
   int64_t incarnation_;
 

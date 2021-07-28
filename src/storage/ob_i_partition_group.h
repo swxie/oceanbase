@@ -161,7 +161,7 @@ class ObSplitPartitionInfoLogEntry;
 class ObPGPartitionGuard;
 
 class ObIPartitionGroup : public common::ObLink {
-  public:
+public:
   ObIPartitionGroup() : ref_cnt_(0)
   {}
   virtual ~ObIPartitionGroup()
@@ -256,7 +256,6 @@ class ObIPartitionGroup : public common::ObLink {
 
   // leader or follower
   virtual int get_role(common::ObRole& role) const = 0;
-  virtual int get_role_for_partition_table(common::ObRole& role) const = 0;
   virtual int get_role_unsafe(common::ObRole& role) const = 0;
   virtual int get_leader_curr_member_list(common::ObMemberList& member_list) const = 0;
   virtual int get_leader(common::ObAddr& leader) const = 0;
@@ -514,6 +513,7 @@ class ObIPartitionGroup : public common::ObLink {
   virtual int get_meta_block_list(common::ObIArray<blocksstable::MacroBlockId>& meta_block_list) const = 0;
   virtual int get_all_tables(ObTablesHandle& tables_handle) = 0;
   virtual int recycle_unused_sstables(const int64_t max_recycle_cnt, int64_t& recycled_cnt) = 0;
+  virtual int recycle_sstable(const ObITable::TableKey &table_key) = 0;
   virtual int check_can_free(bool& can_free) = 0;
   virtual int get_merge_log_ts(int64_t& freeze_ts) = 0;
   virtual int get_table_store_cnt(int64_t& table_cnt) const = 0;
@@ -526,7 +526,7 @@ class ObIPartitionGroup : public common::ObLink {
   virtual int inc_pending_elr_count(memtable::ObMemtableCtx& mt_ctx, const int64_t log_ts) = 0;
   TO_STRING_KV(K_(ref_cnt));
 
-  protected:
+protected:
   // resource usage statistics
   int32_t ref_cnt_;
 };

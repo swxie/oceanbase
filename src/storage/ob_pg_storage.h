@@ -51,7 +51,7 @@ class ObIPartitionComponentFactory;
 class ObPartitionMigrateCtx;
 
 struct ObPGCreateSSTableParam final {
-  public:
+public:
   ObPGCreateSSTableParam()
       : with_partition_param_(nullptr),
         with_table_param_(nullptr),
@@ -82,7 +82,7 @@ struct ObPGCreateSSTableParam final {
 class ObPGStorage {
   friend class ObPGPartitionArrayGuard;
 
-  public:
+public:
   ObPGStorage();
   ~ObPGStorage();
   int init(const ObPartitionKey& key, ObIPartitionComponentFactory* cp_fty,
@@ -199,6 +199,7 @@ class ObPGStorage {
   int get_all_saved_info(ObSavedStorageInfoV2& info) const;
   int get_saved_clog_info(common::ObBaseStorageInfo& clog_info) const;
   int get_saved_data_info(ObDataStorageInfo& data_info) const;
+  int get_last_replay_log_ts(int64_t &last_replay_log_ts) const;
   int set_pg_storage_info(const ObSavedStorageInfoV2& info);
   int set_pg_clog_info(const ObBaseStorageInfo& clog_info, const bool replica_with_data);
   // build index
@@ -329,6 +330,7 @@ class ObPGStorage {
   int replay_remove_sstable(const ObITable::TableKey& table_key);
   int acquire_sstable(const ObITable::TableKey& table_key, ObTableHandle& table_handle);
   int recycle_unused_sstables(const int64_t max_recycle_cnt, int64_t& recycled_cnt);
+  int recycle_sstable(const ObITable::TableKey &table_key);
   int check_can_free(bool& can_free);
 
   int get_min_frozen_memtable_base_version(int64_t& min_base_version);
@@ -396,9 +398,9 @@ class ObPGStorage {
 
   TO_STRING_KV(KP(this), K_(pkey), KP_(meta), K_(log_seq_num), K_(last_freeze_ts));
 
-  private:
+private:
   class GetPGPartitionCountFunctor {
-    public:
+  public:
     GetPGPartitionCountFunctor(const bool include_trans_table, int64_t& count)
         : include_trans_table_(include_trans_table), count_(count)
     {}
@@ -419,12 +421,12 @@ class ObPGStorage {
       return ret;
     }
 
-    private:
+  private:
     bool include_trans_table_;
     int64_t& count_;
   };
   class GetAllPGPartitionKeyFunctor {
-    public:
+  public:
     explicit GetAllPGPartitionKeyFunctor(ObPartitionArray& arr) : pkeys_(arr)
     {}
     ~GetAllPGPartitionKeyFunctor()
@@ -441,11 +443,11 @@ class ObPGStorage {
       return ret;
     }
 
-    private:
+  private:
     ObPartitionArray& pkeys_;
   };
   class RemovePGIndexFunctor {
-    public:
+  public:
     explicit RemovePGIndexFunctor(ObPartitionGroupIndex& pg_index) : pg_index_(pg_index)
     {}
     ~RemovePGIndexFunctor()
@@ -462,12 +464,12 @@ class ObPGStorage {
       return ret;
     }
 
-    private:
+  private:
     ObPartitionGroupIndex& pg_index_;
   };
 
   class GetAllPGPartitionFunctor {
-    public:
+  public:
     explicit GetAllPGPartitionFunctor(ObPGPartitionArrayGuard& guard) : guard_(guard)
     {}
     int operator()(const common::ObPartitionKey& pkey)
@@ -492,11 +494,11 @@ class ObPGStorage {
       return ret;
     }
 
-    private:
+  private:
     ObPGPartitionArrayGuard& guard_;
   };
   class RemovePGPartitionFunctor {
-    public:
+  public:
     RemovePGPartitionFunctor(ObPGPartitionMap& map) : map_(map)
     {}
     void operator()(const common::ObPartitionKey& pkey)
@@ -508,7 +510,7 @@ class ObPGStorage {
       }
     }
 
-    private:
+  private:
     ObPGPartitionMap& map_;
   };
   struct SerializePair {
@@ -521,7 +523,7 @@ class ObPGStorage {
     int64_t size_;
   };
 
-  private:
+private:
   int register_pg_partition_(const common::ObPartitionKey& pkey, ObPGPartition* pg_info);
   int create_pg_memtable_(ObPGPartition* pg_partition);
   int get_all_pg_partition_keys_(common::ObPartitionArray& pkeys, const bool include_trans_table = false);
@@ -588,6 +590,9 @@ class ObPGStorage {
   int create_trans_sstable(
       const ObCreatePartitionParam& create_partition_param, const bool in_slog_trans, ObTablesHandle& sstables_handle);
   int prepare_partition_store_map_(const ObPartitionMigrateCtx& ctx, ObPartitionStore::TableStoreMap*& new_store_map);
+  int remove_unneed_table_store_within_trans(
+      const common::ObIArray<ObPartitionMigrateCtx> &part_ctx_array,
+      ObPartitionStore::TableStoreMap **store_maps);
   int do_replace_store_map_(
       const common::ObIArray<ObPartitionMigrateCtx>& part_ctx_array, ObPartitionStore::TableStoreMap** store_maps);
   int get_freeze_info_(const common::ObVersion& version, ObFreezeInfoSnapshotMgr::FreezeInfo& freeze_info);
@@ -613,10 +618,10 @@ class ObPGStorage {
   int get_restore_point_max_schema_version_(
       const int64_t publish_version, const ObPartitionArray& partitions, int64_t& schema_version);
 
-  private:
+private:
   DISALLOW_COPY_AND_ASSIGN(ObPGStorage);
 
-  private:
+private:
   static const int64_t MAGIC_NUM_BEFORE_2_2_70 = -0xBCDE;
   static const int64_t MAGIC_NUM_2_2_70 = -0xBCDF;
   static const int64_t MAGIC_NUM = -0xBCE0;

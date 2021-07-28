@@ -87,7 +87,7 @@ using GetSwitchFunc = bool&();
 
 template <GetSwitchFunc fn>
 class ObSwitchGuard {
-  public:
+public:
   ObSwitchGuard(bool newval)
   {
     oldval_ = fn();
@@ -98,7 +98,7 @@ class ObSwitchGuard {
     fn() = oldval_;
   }
 
-  private:
+private:
   bool oldval_;
 };
 }  // namespace lib
@@ -163,7 +163,7 @@ int tp_const_error()
 }
 
 class TPSymbolTable {
-  public:
+public:
   TPSymbolTable()
   {}
   ~TPSymbolTable()
@@ -173,7 +173,7 @@ class TPSymbolTable {
     return (NULL != name) ? do_get(name) : NULL;
   }
 
-  private:
+private:
   static uint64_t BKDRHash(const char* str);
   enum { SYMBOL_SIZE_LIMIT = 128, SYMBOL_COUNT_LIMIT = 64 * 1024 };
 
@@ -248,7 +248,7 @@ struct NamedEventItem : public ObDLinkBase<NamedEventItem> {
 
 class EventTable {
   static const int SIZE_OF_EVENT_TABLE = 100000;  // max number of tracepoints supported
-  public:
+public:
   EventTable()
   {
     for (int64_t i = 0; i < SIZE_OF_EVENT_TABLE; ++i) {
@@ -469,6 +469,10 @@ class EventTable {
     EN_ENABLE_HASH_JOIN_CACHE_AWARE = 251,
     EN_SET_DISABLE_HASH_JOIN_BATCH = 252,
 
+    // only work for remote execute
+    EN_DISABLE_REMOTE_EXEC_WITH_PLAN = 255,
+    EN_REMOTE_EXEC_ERR = 256,
+
     EN_XA_PREPARE_ERROR = 260,
     EN_XA_UPDATE_COORD_FAILED = 261,
     EN_XA_PREPARE_RESP_LOST = 262,
@@ -518,7 +522,7 @@ class EventTable {
     return et;
   }
 
-  private:
+private:
   /*
      Array of error codes for all tracepoints.
      For normal error code generation, the value should be the error code itself.

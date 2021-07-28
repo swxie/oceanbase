@@ -25,7 +25,7 @@ class ObILogAllocator;
 }
 namespace clog {
 class MockPartitionLogService : public ObIPartitionLogService {
-  public:
+public:
   virtual int init(ObILogEngine* log_engine, ObLogReplayEngineWrapper* replay_engine,
       ObIFetchLogEngine* fetch_log_engine, election::ObIElectionMgr* election_mgr,
       storage::ObPartitionService* partition_mgr, ObILogCallbackEngine* cb_engine, common::ObILogAllocator* alloc_mgr,
@@ -203,9 +203,11 @@ class MockPartitionLogService : public ObIPartitionLogService {
     UNUSED(sick_child);
     return OB_SUCCESS;
   }
-  int process_reject_msg(const common::ObAddr& server, const int32_t msg_type, const int64_t timestamp)
+  int process_reject_msg(const common::ObAddr &server, const int64_t cluster_id,
+      const int32_t msg_type, const int64_t timestamp)
   {
     UNUSED(server);
+    UNUSED(cluster_id);
     UNUSED(msg_type);
     UNUSED(timestamp);
     return OB_SUCCESS;
@@ -477,11 +479,6 @@ class MockPartitionLogService : public ObIPartitionLogService {
     UNUSED(role);
     return common::OB_SUCCESS;
   }
-  virtual int get_role_for_partition_table(common::ObRole& role) const
-  {
-    UNUSED(role);
-    return common::OB_SUCCESS;
-  }
   virtual int set_archive_restore_state(const int16_t archive_restore_state)
   {
     UNUSED(archive_restore_state);
@@ -512,13 +509,7 @@ class MockPartitionLogService : public ObIPartitionLogService {
     UNUSED(leader_epoch);
     return common::OB_SUCCESS;
   }
-  virtual int get_role_for_partition_table_unlock(bool& in_changing_leader_windows, int64_t& leader_epoch) const
-  {
-    UNUSED(in_changing_leader_windows);
-    UNUSED(leader_epoch);
-    return common::OB_SUCCESS;
-  }
-  virtual int get_leader_curr_member_list(common::ObMemberList& member_list) const
+  virtual int get_leader_curr_member_list(common::ObMemberList &member_list) const
   {
     UNUSED(member_list);
     return common::OB_SUCCESS;
@@ -1492,6 +1483,15 @@ class MockPartitionLogService : public ObIPartitionLogService {
   {
     return true;
   }
+  virtual int process_restore_check_req(const common::ObAddr &server,
+                                        const int64_t cluster_id,
+                                        const ObRestoreCheckType restore_type)
+  {
+    UNUSED(server);
+    UNUSED(cluster_id);
+    UNUSED(restore_type);
+    return OB_SUCCESS;
+  }
   virtual int check_and_try_leader_revoke(const election::ObElection::RevokeType& revoke_type)
   {
     UNUSED(revoke_type);
@@ -1501,8 +1501,14 @@ class MockPartitionLogService : public ObIPartitionLogService {
   {
     return OB_SUCCESS;
   }
-
-  private:
+  virtual int process_query_restore_end_id_resp(const common::ObAddr &server,
+                                                const uint64_t last_restore_log_id) override
+  {
+    UNUSED(server);
+    UNUSED(last_restore_log_id);
+    return OB_SUCCESS;
+  }
+private:
   common::ObPartitionKey p_k_;
 };
 

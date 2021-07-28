@@ -123,6 +123,10 @@ int ObPartitionLoopWorker::gen_readable_info_with_memtable_(ObPartitionReadableI
   if (OB_ISNULL(pls_) || OB_ISNULL(txs_) || OB_ISNULL(replay_status_)) {
     ret = OB_ERR_UNEXPECTED;
     STORAGE_LOG(WARN, "not inited", K(ret), K(pkey_), KP_(pls), KP_(txs), KP_(replay_status));
+  } else if (!replay_status_->is_enabled()) {
+    //current replay_status is disable, return specific errcode
+    ret = OB_STATE_NOT_MATCH;
+    STORAGE_LOG(WARN, "replay status is disable", K(ret), K(pkey_), KP_(pls), KP_(txs), KP_(replay_status));
   } else if (OB_FAIL(pls_->get_next_replay_log_info(next_replay_log_id, readable_info.min_log_service_ts_))) {
     if (OB_STATE_NOT_MATCH == ret) {
       // print one log per minute
@@ -193,17 +197,20 @@ int ObPartitionLoopWorker::generate_weak_read_timestamp(const int64_t max_stale_
   DEBUG_SYNC(BLOCK_WEAK_READ_TIMESTAMP);
   DEBUG_SYNC(SYNC_PG_AND_REPLAY_ENGINE_DEADLOCK);
 
+  bool is_restore = false;
   if (OB_UNLIKELY(!is_inited_)) {
     ret = OB_NOT_INIT;
     STORAGE_LOG(WARN, "partition is not initialized", K(ret), K(pkey_));
+  } else if (FALSE_IT(is_restore = (partition_->get_pg_storage().is_restore()))) {
   } else if (OB_FAIL(gen_readable_info_(readable_info))) {
     // no need to caculate timestamp when partition is rebuilding
     if (OB_STATE_NOT_MATCH != ret && OB_PARTITION_NOT_EXIST != ret) {
       STORAGE_LOG(WARN, "fail to gen readble info", K(ret), K(pkey_));
     }
   } else if (!readable_info.is_valid()) {
-    if (partition_->get_pg_storage().is_restore()) {
+    if (is_restore) {
       // ignore pg in restore
+      ret = OB_STATE_NOT_MATCH;
       if (REACH_TIME_INTERVAL(2 * 1000 * 1000L)) {
         STORAGE_LOG(WARN, "partition is in restore, just ignore", K(ret), K_(pkey), K(readable_info));
       }

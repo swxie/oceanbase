@@ -669,7 +669,7 @@ int ObSql::handle_ps_prepare(const ObString& stmt, ObSqlCtx& context, ObResultSe
     ObSchemaGetterGuard* schema_guard = context.schema_guard_;
 
 #ifndef NDEBUG
-    LOG_INFO("Begin to handle prepare stmtement", K(session.get_sessid()), K(stmt));
+    LOG_INFO("Begin to handle prepare statement", K(session.get_sessid()), K(stmt));
 #endif
 
     if (OB_ISNULL(ps_cache) || OB_ISNULL(pctx) || OB_ISNULL(schema_guard)) {
@@ -878,7 +878,7 @@ int ObSql::handle_ps_execute(const ObPsStmtId client_stmt_id, const stmt::StmtTy
         const ObString& sql = ps_info->get_ps_sql();
         context.cur_sql_ = sql;
 #ifndef NDEBUG
-        LOG_INFO("Begin to handle execute stmtement", K(session.get_sessid()), K(sql));
+        LOG_INFO("Begin to handle execute statement", K(session.get_sessid()), K(sql));
 #endif
         if (OB_FAIL(session.store_query_string(sql))) {
           LOG_WARN("store query string fail", K(ret));
@@ -1154,13 +1154,20 @@ inline int ObSql::handle_text_query(const ObString& stmt, ObSqlCtx& context, ObR
   } else {
     context.cur_sql_ = trimed_stmt;
     pc_ctx = new (pc_ctx) ObPlanCacheCtx(trimed_stmt,
-        false, /*is_ps_mode*/
-        allocator,
-        context,
-        ectx,
-        tenant_id);
-    if (OB_FAIL(session.get_database_id(pc_ctx->bl_key_.db_id_))) {
+                                         false, /*is_ps_mode*/
+                                         allocator,
+                                         context,
+                                         ectx,
+                                         tenant_id);
+    uint64_t database_id = OB_INVALID_ID;
+
+    if (OB_FAIL(session.get_database_id(database_id))) {
       LOG_WARN("Failed to get database id", K(ret));
+    } else if (FALSE_IT(pc_ctx->bl_key_.db_id_ =
+                                  (database_id == OB_INVALID_ID) ?
+                                      OB_OUTLINE_DEFAULT_DATABASE_ID:
+                                      database_id)) {
+      // do nothing
     } else if (!use_plan_cache) {
       if (context.multi_stmt_item_.is_batched_multi_stmt()) {
         ret = OB_BATCHED_MULTI_STMT_ROLLBACK;
@@ -1584,12 +1591,9 @@ int ObSql::generate_physical_plan(ParseResult& parse_result, ObPlanCacheCtx* pc_
                        result.get_exec_context(),
                        stmt))) {  // rewrite stmt
           LOG_WARN("Failed to transforme stmt", K(ret));
-          //        } else if (!optctx.use_default_stat() &&
-          //                   OB_FAIL(analyze_table_stat_version(
-          //                             sql_ctx.schema_guard_, optctx.get_opt_stat_manager(), *stmt))) {
-          //          LOG_WARN("Failed to analyze table stat version", K(ret));
-        } else if (OB_FAIL(
-                       optimize_stmt(optimizer, *(sql_ctx.session_info_), *stmt, logical_plan))) {  // gen logical plan
+        } else if (OB_FALSE_IT(optctx.set_root_stmt(stmt))) {
+        } else if (OB_FAIL(optimize_stmt(optimizer, *(sql_ctx.session_info_),
+                                         *stmt, logical_plan))) { //gen logical plan
           LOG_WARN("Failed to optimizer stmt", K(ret));
         } else if (OB_ISNULL(logical_plan)) {
           ret = OB_INVALID_ARGUMENT;
@@ -2990,6 +2994,15 @@ int ObSql::after_get_plan(ObPlanCacheCtx& pc_ctx, ObSQLSessionInfo& session, ObP
 {
   int ret = OB_SUCCESS;
   ObPhysicalPlanCtx* pctx = pc_ctx.exec_ctx_.get_physical_plan_ctx();
+  bool enable_send_plan_event = EVENT_CALL(EventTable::EN_DISABLE_REMOTE_EXEC_WITH_PLAN) == 0;
+  bool enable_send_plan = session.get_is_in_retry() && enable_send_plan_event;
+  int last_query_retry_err = session.get_retry_info().get_last_query_retry_err();
+  if (OB_TRANSACTION_SET_VIOLATION == last_query_retry_err
+      || OB_TRY_LOCK_ROW_CONFLICT == last_query_retry_err) {
+    enable_send_plan = false;
+  }
+  LOG_DEBUG("before after_get_plan", K(enable_send_plan), K(enable_send_plan_event),
+            "is_retry",session.get_is_in_retry());
   //  LOG_INFO("after get paln", K(pctx), K(phy_plan));
   if (NULL != pctx) {
     if (NULL != phy_plan) {
@@ -3013,7 +3026,8 @@ int ObSql::after_get_plan(ObPlanCacheCtx& pc_ctx, ObSQLSessionInfo& session, ObP
         }  // end for
       }
       if (OB_SUCC(ret) && phy_plan->is_remote_plan() && !phy_plan->contains_temp_table() &&
-          GET_MIN_CLUSTER_VERSION() >= CLUSTER_VERSION_2250) {
+          GET_MIN_CLUSTER_VERSION() >= CLUSTER_VERSION_2250 &&
+          !enable_send_plan) {
         ParamStore& param_store = pctx->get_param_store_for_update();
         if (OB_NOT_NULL(ps_params)) {
           int64_t initial_param_count = ps_params->count();
@@ -3427,7 +3441,7 @@ int ObSql::calc_pre_calculable_exprs(const ObDMLStmt& stmt, const ObIArray<ObHid
                FALSE_IT(phy_plan_ctx->set_cur_time(ObTimeUtility::current_time(), *(exec_ctx.get_my_session())))) {
       // do nothing
     } else if (OB_FAIL(ObCacheObject::pre_calculation(is_ignore_stmt, *pre_calc_frame, exec_ctx))) {
-      LOG_WARN("failde to pre calculate exprs", K(ret));
+      LOG_WARN("failed to pre calculate exprs", K(ret));
     } else if (OB_UNLIKELY(!phy_plan.get_pre_calc_frames().add_last(pre_calc_frame))) {
       ret = OB_ERR_UNEXPECTED;
       LOG_WARN("failed to add list element", K(ret));

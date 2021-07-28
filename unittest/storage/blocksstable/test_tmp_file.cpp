@@ -29,7 +29,7 @@ static const int64_t TEST_COLUMN_CNT = ObExtendType - 1;
 static const int64_t TEST_ROWKEY_COLUMN_CNT = 2;
 
 struct BufHeader {
-  public:
+public:
   BufHeader() : data_size_(0), start_row_(0)
   {}
   virtual ~BufHeader()
@@ -72,14 +72,14 @@ int64_t BufHeader::get_serialize_size() const
 }
 
 class TestTmpFileStress : public share::ObThreadPool {
-  public:
+public:
   TestTmpFileStress();
   virtual ~TestTmpFileStress();
   int init(const int fd, const bool is_write, const int64_t thread_cnt, ObTableSchema* table_schema,
       const bool is_plain_data, const bool is_big_file);
   virtual void run1();
 
-  private:
+private:
   void prepare_data(char* buf, const int64_t macro_block_size);
   void prepare_plain_data(const int64_t buf_size, char* buf, ObIArray<int64_t>& size_array);
   void prepare_one_buffer(const int64_t macro_block_size, const int64_t start_index, char* buf, int64_t& end_index);
@@ -90,7 +90,7 @@ class TestTmpFileStress : public share::ObThreadPool {
   void read_data(const int64_t macro_block_size);
   void read_plain_data(const char* buf, const int64_t macro_block_size);
 
-  private:
+private:
   static const int64_t BUF_COUNT = 16;
   int64_t thread_cnt_;
   int64_t size_;
@@ -356,18 +356,18 @@ void TestTmpFileStress::run1()
 }
 
 class TestMultiTmpFileStress : public share::ObThreadPool {
-  public:
+public:
   TestMultiTmpFileStress();
   virtual ~TestMultiTmpFileStress();
   int init(const int64_t file_cnt, const int64_t dir_id, const int64_t thread_cnt, ObTableSchema* table_schema,
       const bool is_plain_data, const bool is_big_file);
   virtual void run1();
 
-  private:
+private:
   void run_plain_case();
   void run_normal_case();
 
-  private:
+private:
   int64_t file_cnt_;
   int64_t dir_id_;
   int64_t thread_cnt_perf_file_;
@@ -456,16 +456,16 @@ void TestMultiTmpFileStress::run1()
 }
 
 class TestTmpFile : public TestDataFilePrepare {
-  public:
+public:
   TestTmpFile();
   virtual ~TestTmpFile();
   virtual void SetUp();
   virtual void TearDown();
 
-  protected:
+protected:
   ObTableSchema table_schema_;
 
-  private:
+private:
   void prepare_schema();
 };
 
@@ -1421,6 +1421,59 @@ TEST_F(TestTmpFile, test_drop_tenant_file)
 
   ASSERT_EQ(0, ObTmpFileManager::get_instance().files_.map_.size());
   ASSERT_EQ(0, ObTmpFileStore::get_instance().tenant_file_stores_.size());
+}
+
+TEST_F(TestTmpFile, test_handle_double_wait)
+{
+  int ret = OB_SUCCESS;
+  int64_t dir = -1;
+  int64_t fd = -1;
+  ObTmpFileIOInfo io_info;
+  ObTmpFileIOHandle handle;
+  ret = ObTmpFileManager::get_instance().alloc_dir(dir);
+  ASSERT_EQ(OB_SUCCESS, ret);
+  ret = ObTmpFileManager::get_instance().open(fd, dir);
+  ASSERT_EQ(OB_SUCCESS, ret);
+  char *write_buf = new char [256];
+  for (int i = 0; i < 256; ++i) {
+    write_buf[i] = static_cast<char>(i);
+  }
+  char *read_buf = new char [256];
+  io_info.fd_ = fd;
+  io_info.tenant_id_ = 1;
+  io_info.io_desc_.category_ = USER_IO;
+  io_info.io_desc_.wait_event_no_ = 2;
+  io_info.buf_ = write_buf;
+  io_info.size_ = 256;
+  const int64_t timeout_ms = 5000;
+  int64_t write_time = ObTimeUtility::current_time();
+  ret = ObTmpFileManager::get_instance().write(io_info, timeout_ms);
+  write_time = ObTimeUtility::current_time() - write_time;
+  ASSERT_EQ(OB_SUCCESS, ret);
+  io_info.buf_ = read_buf;
+
+
+  int64_t read_time = ObTimeUtility::current_time();
+  ret = ObTmpFileManager::get_instance().pread(io_info, 0, timeout_ms, handle);
+  read_time = ObTimeUtility::current_time() - read_time;
+  ASSERT_EQ(OB_SUCCESS, ret);
+  ASSERT_EQ(256, handle.get_data_size());
+  int cmp = memcmp(handle.get_buffer(), write_buf, 256);
+  ASSERT_EQ(0, cmp);
+
+  ASSERT_EQ(OB_ERR_UNEXPECTED, handle.wait(timeout_ms));
+
+  STORAGE_LOG(INFO, "test_handle_double_wait");
+  STORAGE_LOG(INFO, "io time", K(write_time), K(read_time));
+  ObTmpTenantFileStore *store = NULL;
+  OB_TMP_FILE_STORE.get_store(1, store);
+  store->print_block_usage();
+  ObMallocAllocator::get_instance()->print_tenant_memory_usage(1);
+  ObMallocAllocator::get_instance()->print_tenant_ctx_memory_usage(1);
+  ObMallocAllocator::get_instance()->print_tenant_memory_usage(500);
+  ObMallocAllocator::get_instance()->print_tenant_ctx_memory_usage(500);
+
+  ObTmpFileManager::get_instance().remove(fd);
 }
 
 }  // end namespace unittest

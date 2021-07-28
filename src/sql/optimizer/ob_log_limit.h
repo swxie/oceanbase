@@ -17,7 +17,7 @@
 namespace oceanbase {
 namespace sql {
 class ObLogLimit : public ObLogicalOperator {
-  public:
+public:
   ObLogLimit(ObLogPlan& plan)
       : ObLogicalOperator(plan),
         is_calc_found_rows_(false),
@@ -88,6 +88,8 @@ class ObLogLimit : public ObLogicalOperator {
     return has_union_child_;
   }
   virtual int est_cost() override;
+  virtual int allocate_granule_pre(AllocGIContext &ctx);
+  virtual int allocate_granule_post(AllocGIContext &ctx);
   virtual int allocate_exchange_post(AllocExchContext* ctx);
   virtual int transmit_op_ordering() override;
   virtual int re_est_cost(const ObLogicalOperator* parent, double need_row_count, bool& re_est) override;
@@ -106,7 +108,7 @@ class ObLogLimit : public ObLogicalOperator {
     return is_fetch_with_ties_;
   }
 
-  private:
+private:
   bool is_calc_found_rows_;
   bool has_union_child_;
   bool is_top_limit_;

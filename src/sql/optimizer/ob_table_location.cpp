@@ -1306,8 +1306,10 @@ int ObTableLocation::init_table_location(ObSqlSchemaGuard& schema_guard, uint64_
   return ret;
 }
 
-int ObTableLocation::init_table_location_with_rowkey(ObSqlSchemaGuard& schema_guard, uint64_t table_id,
-    ObSQLSessionInfo& session_info, const bool is_dml_table /*= false*/)
+int ObTableLocation::init_table_location_with_rowkey(ObSqlSchemaGuard &schema_guard,
+                                                     uint64_t table_id,
+                                                     ObSQLSessionInfo &session_info,
+                                                     const bool is_dml_table /*= true*/)
 {
   int ret = OB_SUCCESS;
   ObSchemaChecker schema_checker;
@@ -1619,7 +1621,7 @@ int ObTableLocation::calculate_partition_id_by_row(
   if (OB_FAIL(calculate_partition_ids_by_row(exec_ctx, part_mgr, row, part_ids, part_idx))) {
     LOG_WARN("calculate partition ids by row failed", K(ret));
   } else if (OB_UNLIKELY(part_ids.count() != 1) && OB_UNLIKELY(part_idx != 0)) {
-    ret = OB_ERR_UNEXPECTED;
+    ret = OB_NO_PARTITION_FOR_GIVEN_VALUE;
     LOG_WARN("part ids is invalid", K(part_ids), K(part_idx));
   } else {
     part_id = part_ids.at(0);
@@ -5415,8 +5417,11 @@ int ObTableLocation::calc_partition_ids_by_range(ObExecContext& exec_ctx, ObPart
   return ret;
 }
 
-int ObTableLocation::init_table_location_with_row_desc(
-    ObSqlSchemaGuard& schema_guard, uint64_t table_id, RowDesc& input_row_desc, ObSQLSessionInfo& session_info)
+int ObTableLocation::init_table_location_with_row_desc(ObSqlSchemaGuard &schema_guard,
+                                                       uint64_t table_id,
+                                                       RowDesc &input_row_desc,
+                                                       ObSQLSessionInfo &session_info,
+                                                       const bool is_dml_table)
 {
   int ret = OB_SUCCESS;
   ObSchemaChecker schema_checker;
@@ -5466,12 +5471,12 @@ int ObTableLocation::init_table_location_with_row_desc(
                    *delete_stmt, real_table_id, expr_factory, input_row_desc, row_desc))) {
       LOG_WARN("generate rowkey desc failed", K(ret), K(real_table_id));
     } else if (OB_FAIL(init_table_location(schema_guard,
-                   real_table_id,
-                   real_table_id,
-                   *delete_stmt,
-                   row_desc,
-                   false,
-                   default_asc_direction()))) {
+                                           real_table_id,
+                                           real_table_id,
+                                           *delete_stmt,
+                                           row_desc,
+                                           is_dml_table,
+                                           default_asc_direction()))) {
       LOG_WARN("init table location failed", K(ret), K(real_table_id));
     } else if (OB_FAIL(clear_columnlized_in_row_desc(row_desc))) {
       LOG_WARN("Failed to clear columnlized in row desc", K(ret));

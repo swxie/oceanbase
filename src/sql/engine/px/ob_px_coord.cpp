@@ -617,7 +617,7 @@ int ObPxCoord::destroy_all_channel(ObPxCoordCtx& px_ctx) const
   }
 
   const ObIArray<ObDfo*>& dfos = px_ctx.coord_info_.dfo_mgr_.get_all_dfos();
-  /* even if one channel unlink faild, we still continue destroy other channel */
+  /* even if one channel unlink failed, we still continue destroy other channel */
   ARRAY_FOREACH_X(dfos, idx, cnt, true)
   {
     const ObDfo* edge = dfos.at(idx);
@@ -625,7 +625,7 @@ int ObPxCoord::destroy_all_channel(ObPxCoordCtx& px_ctx) const
     if (OB_FAIL(edge->get_sqcs(sqcs))) {
       LOG_WARN("fail to get sqcs", K(ret));
     } else {
-      /* one channel unlink faild still continue destroy other channel */
+      /* one channel unlink failed still continue destroy other channel */
       ARRAY_FOREACH_X(sqcs, sqc_idx, sqc_cnt, true)
       {
         const ObDtlChannelInfo& qc_ci = sqcs.at(sqc_idx)->get_qc_channel_info_const();
@@ -710,6 +710,8 @@ int ObPxCoord::wait_all_running_dfos_exit(ObExecContext& ctx) const
     loop.ignore_interrupt();
 
     ObPxControlChannelProc control_channels;
+    int64_t times_offset = 0;
+    int64_t last_timestamp = 0;
     bool wait_msg = true;
     while (OB_SUCC(ret) && wait_msg) {
       ObDtlChannelLoop& loop = px_ctx.msg_loop_;
@@ -718,7 +720,7 @@ int ObPxCoord::wait_all_running_dfos_exit(ObExecContext& ctx) const
       /**
        * start to get next msg.
        */
-      if (OB_FAIL(check_all_sqc(active_dfos, all_dfo_terminate))) {
+      if (OB_FAIL(check_all_sqc(active_dfos, times_offset++, all_dfo_terminate, last_timestamp))) {
         LOG_WARN("fail to check sqc");
       } else if (all_dfo_terminate) {
         wait_msg = false;
@@ -762,7 +764,10 @@ int ObPxCoord::wait_all_running_dfos_exit(ObExecContext& ctx) const
   return ret;
 }
 
-int ObPxCoord::check_all_sqc(ObIArray<ObDfo*>& active_dfos, bool& all_dfo_terminate) const
+int ObPxCoord::check_all_sqc(ObIArray<ObDfo *> &active_dfos,
+                             int64_t times_offset,
+                             bool &all_dfo_terminate, 
+                             int64_t &last_timestamp) const
 {
   int ret = OB_SUCCESS;
   all_dfo_terminate = true;
@@ -781,6 +786,15 @@ int ObPxCoord::check_all_sqc(ObIArray<ObDfo*>& active_dfos, bool& all_dfo_termin
           LOG_WARN("NULL unexpected sqc", K(ret));
         } else if (sqc->need_report()) {
           LOG_DEBUG("wait for sqc", K(sqc));
+          int64_t cur_timestamp = ObTimeUtility::current_time();
+          // > 1s, increase gradually
+          // In order to get the dfo to propose as soon as possible and 
+          // In order to avoid the interruption that is not received, 
+          // So the interruption needs to be sent repeatedly
+          if (cur_timestamp - last_timestamp > (1000000 + min(times_offset, 10) * 1000000)) { 
+            last_timestamp = cur_timestamp;
+            ObInterruptUtil::broadcast_dfo(active_dfos.at(i), OB_GOT_SIGNAL_ABORTING);
+          }
           all_dfo_terminate = false;
           break;
         }

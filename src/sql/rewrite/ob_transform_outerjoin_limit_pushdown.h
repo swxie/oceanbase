@@ -26,7 +26,7 @@ class ObIAllocator;
 namespace sql {
 class ObRawExpr;
 class ObTransformOuterJoinLimitPushDown : public ObTransformRule {
-  private:
+private:
   struct OjLimitPushDownHelper {
     OjLimitPushDownHelper()
         : select_stmt_(NULL),
@@ -51,7 +51,7 @@ class ObTransformOuterJoinLimitPushDown : public ObTransformRule {
         K_(is_limit_only), K_(need_create_view));
   };
 
-  public:
+public:
   explicit ObTransformOuterJoinLimitPushDown(ObTransformerCtx* ctx) : ObTransformRule(ctx, TransMethod::PRE_ORDER)
   {}
 
@@ -61,7 +61,7 @@ class ObTransformOuterJoinLimitPushDown : public ObTransformRule {
   virtual int transform_one_stmt(
       common::ObIArray<ObParentDMLStmt>& parent_stmts, ObDMLStmt*& stmt, bool& trans_happened) override;
 
-  private:
+private:
   int check_stmt_validity(ObDMLStmt* stmt, OjLimitPushDownHelper& helper, bool& is_valid);
 
   int do_transform(OjLimitPushDownHelper& helper);
@@ -87,9 +87,6 @@ class ObTransformOuterJoinLimitPushDown : public ObTransformRule {
   int find_target_table(ObSelectStmt* select_stmt, ObSqlBitSet<> table_ids, TableItem*& target_table);
 
   int check_validity_for_target_table(OjLimitPushDownHelper& helper, bool& is_valid);
-
-  int prepare_view_table(ObSelectStmt* stmt, TableItem* target_table, ObIArray<ObRawExpr*>& extracted_conditions,
-      ObIArray<OrderItem>& saved_order_items, TableItem*& view_table);
 
   int pushdown_view_table(ObSelectStmt* stmt, TableItem* target_table, ObIArray<ObRawExpr*>& extracted_conditions,
       ObIArray<OrderItem>& saved_order_items, bool need_rename, bool is_limit_only);

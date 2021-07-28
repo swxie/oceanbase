@@ -101,6 +101,7 @@ ObLogTask::ObLogTask()
       log_buf_(NULL),
       generation_timestamp_(OB_INVALID_TIMESTAMP),
       submit_timestamp_(OB_INVALID_TIMESTAMP),
+      next_replay_log_ts_(OB_INVALID_TIMESTAMP),
       epoch_id_(OB_INVALID_TIMESTAMP),
       data_checksum_(0),
       accum_checksum_(0),
@@ -221,6 +222,7 @@ int ObLogTask::reset_log()
   log_buf_len_ = 0;
   generation_timestamp_ = OB_INVALID_TIMESTAMP;
   submit_timestamp_ = OB_INVALID_TIMESTAMP;
+  next_replay_log_ts_ = OB_INVALID_TIMESTAMP;
   state_map_.reset_map(LOCAL_FLUSHED);
   state_map_.reset_map(ALREADY_SEND_TO_STANDBY);
   state_map_.reset_map(SUBMIT_LOG_EXIST);
@@ -629,6 +631,11 @@ int64_t ObLogTask::get_submit_timestamp() const
   return submit_timestamp_;
 }
 
+int64_t ObLogTask::get_next_replay_log_ts() const
+{
+  return next_replay_log_ts_;
+}
+
 int64_t ObLogTask::get_data_checksum() const
 {
   return data_checksum_;
@@ -648,15 +655,22 @@ void ObLogTask::set_confirmed_info(const ObConfirmedInfo& confirmed_info)
 {
   state_map_.set_map(CONFIRMED_INFO_EXIST);
   const int64_t arg_data_checksum = confirmed_info.get_data_checksum();
+  const int64_t arg_accum_checksum = confirmed_info.get_accum_checksum();
+  const int64_t arg_epoch_id = confirmed_info.get_epoch_id();
+  const int64_t arg_submit_timestamp = confirmed_info.get_submit_timestamp();
   if (is_submit_log_exist()) {
     // check data_checksum_ and epoch_id_ when log exists
-    if (data_checksum_ != arg_data_checksum || epoch_id_ != confirmed_info.get_epoch_id()) {
-      CLOG_LOG(ERROR, "set_confirmed_info meta info not match", K(data_checksum_), K(epoch_id_), K(confirmed_info));
+    if (data_checksum_ != arg_data_checksum
+        || epoch_id_ != arg_epoch_id
+        || (OB_INVALID_TIMESTAMP != arg_submit_timestamp
+           && submit_timestamp_ != arg_submit_timestamp)) {
+      CLOG_LOG(ERROR, "set_confirmed_info meta info not match", K(data_checksum_),
+          K(epoch_id_), K(confirmed_info));
     }
   }
-  epoch_id_ = confirmed_info.get_epoch_id();
+  epoch_id_ = arg_epoch_id;
   data_checksum_ = arg_data_checksum;
-  accum_checksum_ = confirmed_info.get_accum_checksum();
+  accum_checksum_ = arg_accum_checksum;
 }
 
 void ObLogTask::set_log_confirmed()
@@ -731,7 +745,7 @@ int ObLogTask::log_deep_copy_to_(const ObLogEntry& log_entry, const bool need_co
     if (NULL ==
         (buf = static_cast<char*>(TMA_MGR_INSTANCE.alloc_log_entry_buf(log_entry.get_header().get_data_len())))) {
       ret = OB_ALLOCATE_MEMORY_FAILED;
-      CLOG_LOG(ERROR, "allocate memory fail", K(ret), "header", log_entry.get_header());
+      CLOG_LOG(WARN, "allocate memory fail", K(ret), "header", log_entry.get_header());
     } else {
       MEMCPY(buf, log_entry.get_buf(), log_entry.get_header().get_data_len());
       log_buf_ = buf;
@@ -742,15 +756,20 @@ int ObLogTask::log_deep_copy_to_(const ObLogEntry& log_entry, const bool need_co
     log_buf_len_ = 0;
   }
   if (OB_SUCC(ret)) {
-    log_type_ = static_cast<uint8_t>(log_entry.get_header().get_log_type());
-    if (log_entry.get_header().is_trans_log()) {
-      state_map_.set_map(IS_TRANS_LOG);
+    if (OB_FAIL(log_entry.get_next_replay_ts_for_rg(next_replay_log_ts_))) {
+      CLOG_LOG(WARN, "failed to get_next_replay_ts_for_rg", K(ret), "header", log_entry.get_header());
+    } else {
+      log_type_ = static_cast<uint8_t>(log_entry.get_header().get_log_type());
+      const ObLogEntryHeader& log_header = log_entry.get_header();
+      if (log_header.is_trans_log()) {
+        state_map_.set_map(IS_TRANS_LOG);
+      }
+      proposal_id_ = log_header.get_proposal_id();
+      generation_timestamp_ = log_header.get_generation_timestamp();
+      submit_timestamp_ = log_header.get_submit_timestamp();
+      data_checksum_ = log_header.get_data_checksum();
+      epoch_id_ = log_header.get_epoch_id();
     }
-    proposal_id_ = log_entry.get_header().get_proposal_id();
-    generation_timestamp_ = log_entry.get_header().get_generation_timestamp();
-    submit_timestamp_ = log_entry.get_header().get_submit_timestamp();
-    data_checksum_ = log_entry.get_header().get_data_checksum();
-    epoch_id_ = log_entry.get_header().get_epoch_id();
   }
   return ret;
 }

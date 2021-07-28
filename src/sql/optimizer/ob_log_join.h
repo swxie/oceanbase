@@ -19,7 +19,7 @@ namespace oceanbase {
 namespace sql {
 class ObLogicalOperator;
 class ObLogJoin : public ObLogicalOperator {
-  public:
+public:
   ObLogJoin(ObLogPlan& plan)
       : ObLogicalOperator(plan),
         join_conditions_(),
@@ -291,7 +291,7 @@ class ObLogJoin : public ObLogicalOperator {
     return connect_by_extra_exprs_.assign(exprs);
   }
 
-  private:
+private:
   inline bool can_enable_gi_partition_pruning()
   {
     return (NESTED_LOOP_JOIN == join_algo_) && join_dist_algo_ == JoinDistAlgo::DIST_PARTITION_NONE;
@@ -323,6 +323,7 @@ class ObLogJoin : public ObLogicalOperator {
   virtual int allocate_granule_pre(AllocGIContext& ctx) override;
   int get_candidate_join_distribution_method(ObLogPlan& log_plan, const EqualSets& equal_sets,
       const common::ObIArray<ObRawExpr*>& left_join_keys, const common::ObIArray<ObRawExpr*>& right_join_keys,
+      const bool exchange_allocator,
       uint64_t& candidate_method);
   int check_if_match_join_partition_wise(ObLogPlan& log_plan, const EqualSets& equal_sets,
       const common::ObIArray<ObRawExpr*>& left_keys, const common::ObIArray<ObRawExpr*>& right_keys,
@@ -335,7 +336,7 @@ class ObLogJoin : public ObLogicalOperator {
     return SM_NONE != slave_mapping_type_;
   }
 
-  private:
+private:
   // all join predicates
   common::ObSEArray<ObRawExpr*, 8, common::ModulePageAllocator, true> join_conditions_;  // equal join condition, for
                                                                                          // merge-join

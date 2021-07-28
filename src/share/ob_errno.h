@@ -18,6 +18,7 @@
 
 namespace oceanbase {
 namespace common {
+
 constexpr int OB_LAST_ERROR_CODE = -38105;
 constexpr int OB_ERR_SQL_START = -5000;
 constexpr int OB_ERR_SQL_END = -5999;
@@ -203,7 +204,7 @@ constexpr int OB_ERR_DIVISOR_IS_ZERO = -4333;
 constexpr int OB_ERR_AES_IV_LENGTH = -4336;
 constexpr int OB_STORE_DIR_ERROR = -4337;
 constexpr int OB_OPEN_TWICE = -4338;
-constexpr int OB_RAID_SUPER_BLOCK_NOT_MACTH = -4339;
+constexpr int OB_RAID_SUPER_BLOCK_NOT_MATCH = -4339;
 constexpr int OB_NOT_OPEN = -4340;
 constexpr int OB_NOT_IN_SERVICE = -4341;
 constexpr int OB_RAID_DISK_NOT_NORMAL = -4342;
@@ -654,7 +655,6 @@ constexpr int OB_ERR_WRONG_ROWID = -5337;
 constexpr int OB_ERR_INVALID_WINDOW_FUNCTION_PLACE = -5338;
 constexpr int OB_ERR_PARSE_PARTITION_LIST = -5339;
 constexpr int OB_ERR_MULTIPLE_DEF_CONST_IN_LIST_PART = -5340;
-// OB_ERR_INVALID_HEX_NUMBER(5342) has been moved to deps/oblib/src/lib/ob_errno.h
 constexpr int OB_ERR_WRONG_FUNC_ARGUMENTS_TYPE = -5343;
 constexpr int OB_ERR_MULTI_UPDATE_KEY_CONFLICT = -5344;
 constexpr int OB_ERR_INSUFFICIENT_PX_WORKER = -5345;
@@ -1526,7 +1526,7 @@ constexpr int OB_ERR_INVALID_DATE_MSG_FMT_V2 = -4219;
   "The initialization vector supplied to aes_encrypt is too short. Must be at least 16 bytes long"
 #define OB_STORE_DIR_ERROR__USER_ERROR_MSG "store directory structure error"
 #define OB_OPEN_TWICE__USER_ERROR_MSG "open twice"
-#define OB_RAID_SUPER_BLOCK_NOT_MACTH__USER_ERROR_MSG "raid super block not match"
+#define OB_RAID_SUPER_BLOCK_NOT_MATCH__USER_ERROR_MSG "raid super block not match"
 #define OB_NOT_OPEN__USER_ERROR_MSG "not opened"
 #define OB_NOT_IN_SERVICE__USER_ERROR_MSG "target module is not in service"
 #define OB_RAID_DISK_NOT_NORMAL__USER_ERROR_MSG "raid disk not in normal status"
@@ -2549,7 +2549,7 @@ constexpr int OB_ERR_INVALID_DATE_MSG_FMT_V2 = -4219;
 #define OB_ERR_AT_LEAST_ONE_COLUMN_NOT_VIRTUAL__USER_ERROR_MSG "table must have at least 1 column that is not virtual"
 #define OB_ERR_ONLY_PURE_FUNC_CANBE_INDEXED__USER_ERROR_MSG "only pure functions can be indexed"
 #define OB_ERR_ONLY_PURE_FUNC_CANBE_VIRTUAL_COLUMN_EXPRESSION__USER_ERROR_MSG \
-  "only pure functions can be specified in a virtual column expression"
+  "Expression of generated column contains a disallowed function"
 #define OB_ERR_UPDATE_OPERATION_ON_VIRTUAL_COLUMNS__USER_ERROR_MSG "UPDATE operation disallowed on virtual columns"
 #define OB_ERR_INVALID_COLUMN_EXPRESSION__USER_ERROR_MSG "Invalid column expression was specified"
 #define OB_ERR_IDENTITY_COLUMN_COUNT_EXCE_LIMIT__USER_ERROR_MSG "table can have only one identity column"
@@ -2779,6 +2779,7 @@ constexpr int OB_ERR_INVALID_DATE_MSG_FMT_V2 = -4219;
 #define OB_ERR_DROP_TRUNCATE_PARTITION_REBUILD_INDEX__USER_ERROR_MSG \
   "rebuild global index:'%.*s' failed when drop/truncate partitions"
 #define OB_ERR_ATLER_TABLE_ILLEGAL_FK__USER_ERROR_MSG "unique/primary keys in table referenced by enabled foreign keys"
+#define OB_IO_LIMIT__USER_ERROR_MSG "IO limit"
 #define OB_NO_SUCH_FILE_OR_DIRECTORY__USER_ERROR_MSG "no such file or directory"
 #define OB_FILE_OR_DIRECTORY_EXIST__USER_ERROR_MSG "file or directory already exist"
 #define OB_ERR_DUPLICATE_HAVING_CLAUSE_IN_TABLE_EXPRESSION__USER_ERROR_MSG "Duplicate having-clause in table expression"
@@ -3255,7 +3256,7 @@ constexpr int OB_ERR_INVALID_DATE_MSG_FMT_V2 = -4219;
 #define OB_STORE_DIR_ERROR__ORA_USER_ERROR_MSG \
   "ORA-00600: internal error code, arguments: -4337, store directory structure error"
 #define OB_OPEN_TWICE__ORA_USER_ERROR_MSG "ORA-00600: internal error code, arguments: -4338, open twice"
-#define OB_RAID_SUPER_BLOCK_NOT_MACTH__ORA_USER_ERROR_MSG \
+#define OB_RAID_SUPER_BLOCK_NOT_MATCH__ORA_USER_ERROR_MSG \
   "ORA-00600: internal error code, arguments: -4339, raid super block not match"
 #define OB_NOT_OPEN__ORA_USER_ERROR_MSG "ORA-00600: internal error code, arguments: -4340, not opened"
 #define OB_NOT_IN_SERVICE__ORA_USER_ERROR_MSG \
@@ -5184,6 +5185,7 @@ constexpr int OB_ERR_INVALID_DATE_MSG_FMT_V2 = -4219;
   "ORA-00600: internal error code, arguments: -9055, rebuild global index:'%.*s' failed when drop/truncate partitions"
 #define OB_ERR_ATLER_TABLE_ILLEGAL_FK__ORA_USER_ERROR_MSG \
   "ORA-02266: unique/primary keys in table referenced by enabled foreign keys"
+#define OB_IO_LIMIT__ORA_USER_ERROR_MSG "ORA-00600: internal error code, arguments: -9061, IO limit"
 #define OB_NO_SUCH_FILE_OR_DIRECTORY__ORA_USER_ERROR_MSG \
   "ORA-00600: internal error code, arguments: -9100, no such file or directory"
 #define OB_FILE_OR_DIRECTORY_EXIST__ORA_USER_ERROR_MSG \

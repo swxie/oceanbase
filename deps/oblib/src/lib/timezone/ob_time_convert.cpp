@@ -897,6 +897,7 @@ int ObTimeConverter::datetime_to_double(int64_t value, const ObTimeZoneInfo* tz_
   return ret;
 }
 
+// ObDatetimeType: tz_info = NULL. ObTimestampType: tz_info != NULL.
 int ObTimeConverter::datetime_to_str(int64_t value, const ObTimeZoneInfo* tz_info, const ObString& nls_format,
     int16_t scale, char* buf, int64_t buf_len, int64_t& pos, bool with_delim)
 {
@@ -1077,12 +1078,6 @@ int ObTimeConverter::datetime_to_timestamp(int64_t dt_value, const ObTimeZoneInf
   bool is_timestamp = (tz_info != NULL);
   if (OB_FAIL(sub_timezone_offset(tz_info, is_timestamp, ObString(), ts_value))) {
     LOG_WARN("failed to adjust value with time zone offset", K(ret));
-    // timestamp less than 0000-01-02 00:00:00 utc or greater than 9999-12-30 23:59:59 utc is invalid.
-    // when cast datetime to timestamp, local time of timestamp is equal to origi datetime value.
-    // so we need to compare result of sub_timezone_offset with MAX/MIN time.
-  } else if (ts_value > MYSQL_TIMESTAMP_MAX_VAL || ts_value < MYSQL_TIMESTAMP_MIN_VAL) {
-    ret = OB_INVALID_DATE_VALUE;
-    LOG_WARN("invalid timestamp", K(ret), K(ts_value));
   }
   return ret;
 }
@@ -2660,7 +2655,11 @@ int ObTimeConverter::ob_time_to_str(
     if (HAS_TYPE_DATE(mode)) {
       if (OB_UNLIKELY(parts[DT_YEAR] > 9999) || OB_UNLIKELY(parts[DT_YEAR] < 0) || OB_UNLIKELY(parts[DT_MON] > 12) ||
           OB_UNLIKELY(parts[DT_MON] < 0) || OB_UNLIKELY(parts[DT_MDAY] > 31) || OB_UNLIKELY(parts[DT_MDAY] < 0)) {
-        ret = OB_ERR_UNEXPECTED;
+        if (parts[DT_YEAR] > 9999 || parts[DT_YEAR] < 0) {
+          ret = OB_ERR_DATETIME_INTERVAL_INTERNAL_ERROR;
+        } else {
+          ret = OB_ERR_UNEXPECTED;
+        }
         LOG_WARN("Unexpected time", K(ret), K(parts[DT_YEAR]), K(parts[DT_MON]), K(parts[DT_MDAY]));
       } else if (OB_LIKELY(with_delim && (buf_len - pos) > 10)        // format 0000-00-00
                  || OB_LIKELY(!with_delim && (buf_len - pos) > 8)) {  // format yyyymmdd
@@ -3184,16 +3183,13 @@ int ObTimeConverter::str_to_ob_time_oracle_dfm(
     // 2. set default value for ob_time
     if (OB_SUCC(ret)) {
       int64_t utc_curr_time = ObTimeUtility::current_time();
+      int64_t utc_curr_time_copy = utc_curr_time;
       int32_t cur_date = 0;
       if (OB_ISNULL(cvrt_ctx.tz_info_)) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("session timezone info is null", K(ret));
-      } else if (sub_timezone_offset(*(cvrt_ctx.tz_info_),
-                     ObString(),
-                     utc_curr_time,
-                     session_tz_offset,
-                     session_tz_id,
-                     session_tran_type_id)) {
+      } else if (sub_timezone_offset(*(cvrt_ctx.tz_info_), ObString(),
+                                     utc_curr_time_copy, session_tz_offset, session_tz_id, session_tran_type_id)) {
         LOG_WARN("get session timezone offset failed", K(ret));
       } else if (OB_FAIL(datetime_to_date(utc_curr_time, cvrt_ctx.tz_info_, cur_date))) {
         LOG_WARN("timestamp to date failed", K(ret));
@@ -4757,11 +4753,6 @@ int ObTimeConverter::ob_time_to_datetime(ObTime& ob_time, const ObTimeConvertCtx
       tz_id_pos_map = NULL;
       literal_tz_info = NULL;
     }
-    if (OB_SUCC(ret) && cvrt_ctx.is_timestamp_ &&
-        (value > MYSQL_TIMESTAMP_MAX_VAL || value < MYSQL_TIMESTAMP_MIN_VAL)) {
-      ret = OB_INVALID_DATE_VALUE;
-      LOG_WARN("invalid timestamp", K(ret), K(value));
-    }
   }
   return ret;
 }
@@ -5988,7 +5979,7 @@ int ObTimeConverter::interval_ym_to_str(const ObIntervalYMValue& value, const Ob
                  buf_len,
                  pos,
                  format_str,
-                 display_part.is_negtive_ ? '-' : '+',
+                 display_part.is_negative_ ? '-' : '+',
                  display_part.parts_[ObIntervalParts::YEAR_PART],
                  display_part.parts_[ObIntervalParts::MONTH_PART]))) {
     LOG_WARN("fail to print interval values", K(ret));
@@ -6023,7 +6014,7 @@ int ObTimeConverter::interval_ds_to_str(const ObIntervalDSValue& value, const Ob
                  buf_len,
                  pos,
                  format_str_part1,
-                 display_part.is_negtive_ ? '-' : '+',
+                 display_part.is_negative_ ? '-' : '+',
                  display_part.parts_[ObIntervalParts::DAY_PART],
                  display_part.parts_[ObIntervalParts::HOUR_PART],
                  display_part.parts_[ObIntervalParts::MINUTE_PART],
@@ -6349,7 +6340,7 @@ int ObTimeConverter::encode_interval_ym(
     ret = OB_SIZE_OVERFLOW;
     LOG_WARN("invalid argument", KP(buf), K(len), K(pos), K(data_len));
   } else if (OB_FAIL(ObMySQLUtil::store_int1(
-                 buf, len, static_cast<int8_t>(display_parts.is_negtive_), pos))) {  // is_negative(1)
+                 buf, len, static_cast<int8_t>(display_parts.is_negative_), pos))) {  // is_negative(1)
     LOG_WARN("fail to store int", K(ret));
   } else if (OB_FAIL(ObMySQLUtil::store_int4(
                  buf, len, static_cast<int32_t>(display_parts.parts_[ObIntervalParts::YEAR_PART]), pos))) {  // years(4)
@@ -6404,7 +6395,7 @@ int ObTimeConverter::encode_interval_ds(
     ret = OB_SIZE_OVERFLOW;
     LOG_WARN("invalid argument", KP(buf), K(len), K(pos), K(data_len));
   } else if (OB_FAIL(ObMySQLUtil::store_int1(
-                 buf, len, static_cast<int8_t>(display_parts.is_negtive_), pos))) {  // is_negative(1)
+                 buf, len, static_cast<int8_t>(display_parts.is_negative_), pos))) {  // is_negative(1)
     LOG_WARN("fail to store int", K(ret));
   } else if (OB_FAIL(ObMySQLUtil::store_int4(
                  buf, len, static_cast<int32_t>(display_parts.parts_[ObIntervalParts::DAY_PART]), pos))) {  // days(4)
@@ -6471,7 +6462,7 @@ void ObTimeConverter::interval_ym_to_display_part(const ObIntervalYMValue& value
   int64_t abs_nmonth = std::abs(value.get_nmonth());
   display_parts.parts_[ObIntervalParts::YEAR_PART] = static_cast<int32_t>(abs_nmonth / MONTHS_PER_YEAR);
   display_parts.parts_[ObIntervalParts::MONTH_PART] = static_cast<int32_t>(abs_nmonth % MONTHS_PER_YEAR);
-  display_parts.is_negtive_ = value.is_negative();
+  display_parts.is_negative_ = value.is_negative();
 }
 
 void ObTimeConverter::interval_ds_to_display_part(const ObIntervalDSValue& value, ObIntervalParts& display_parts)
@@ -6486,7 +6477,7 @@ void ObTimeConverter::interval_ds_to_display_part(const ObIntervalDSValue& value
   display_parts.parts_[ObIntervalParts::MINUTE_PART] = static_cast<int32_t>(rest_minutes_in_day % MINS_PER_HOUR);
   display_parts.parts_[ObIntervalParts::SECOND_PART] = static_cast<int32_t>(rest_seconds_in_day % SECS_PER_MIN);
   display_parts.parts_[ObIntervalParts::FRECTIONAL_SECOND_PART] = abs_fs;
-  display_parts.is_negtive_ = value.is_negative();
+  display_parts.is_negative_ = value.is_negative();
 }
 
 int ObTimeConverter::iso_str_to_interval_ym(const ObString& str, ObIntervalYMValue& value)
@@ -6496,7 +6487,7 @@ int ObTimeConverter::iso_str_to_interval_ym(const ObString& str, ObIntervalYMVal
   if (OB_FAIL(iso_interval_str_parse(str, interval_parts, ObIntervalParts::YEAR_PART))) {
     LOG_WARN("fail to parse interval str", K(ret));
   } else {
-    value.set_value(interval_parts.is_negtive_,
+    value.set_value(interval_parts.is_negative_,
         interval_parts.parts_[ObIntervalParts::YEAR_PART],
         interval_parts.parts_[ObIntervalParts::MONTH_PART]);
     if (OB_FAIL(value.validate())) {
@@ -6514,7 +6505,7 @@ int ObTimeConverter::iso_str_to_interval_ds(const ObString& str, ObIntervalDSVal
   if (OB_FAIL(iso_interval_str_parse(str, interval_parts, ObIntervalParts::DAY_PART))) {
     LOG_WARN("fail to parse interval str", K(ret));
   } else {
-    value.set_value(interval_parts.is_negtive_,
+    value.set_value(interval_parts.is_negative_,
         interval_parts.parts_[ObIntervalParts::DAY_PART],
         interval_parts.parts_[ObIntervalParts::HOUR_PART],
         interval_parts.parts_[ObIntervalParts::MINUTE_PART],
@@ -6543,9 +6534,9 @@ int ObTimeConverter::iso_interval_str_parse(
     LOG_WARN("empty input str", K(ret));
   } else if (parse_ctx.cur_ch_[0] == '-') {
     parse_ctx.update(1);
-    interval_parts.is_negtive_ = true;
+    interval_parts.is_negative_ = true;
   } else {
-    interval_parts.is_negtive_ = false;
+    interval_parts.is_negative_ = false;
   }
 
   if (OB_FAIL(ret)) {
