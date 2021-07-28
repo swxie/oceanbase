@@ -2582,17 +2582,5 @@
     "info_cn": "U数字格式元素的双货币符号",
     "background_cn": "兼容 oracle number format model U 数字格式元素",
     "ref_url": "https://yuque.antfin-inc.com/ob/product_functionality_review/efqk1r"
-  },
-  "ob_enable_dynamic_sample": {
-    "id": 10114,
-    "name": "ob_enable_dynamic_sample",
-    "value": "0",
-    "data_type": "bool",
-    "info": "control whether use dynamic sample",
-    "flags": "Global | SESSION | NEED_SERIALIZE",
-    "publish_version": "",
-    "info_cn": "",
-    "background_cn": "",
-    "ref_url": ""
   }
 }
