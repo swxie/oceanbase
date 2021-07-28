@@ -462,6 +462,7 @@ class ObBasicSessionInfo {
   uint64_t get_local_auto_increment_offset() const;
   uint64_t get_local_last_insert_id() const;
   bool get_local_ob_enable_plan_cache() const;
+  bool get_local_ob_enable_dynamic_sample() const;
   bool get_local_ob_enable_sql_audit() const;
   ObLengthSemantics get_local_nls_length_semantics() const;
   ObLengthSemantics get_actual_nls_length_semantics() const;
@@ -2266,6 +2267,11 @@ inline uint64_t ObBasicSessionInfo::get_local_last_insert_id() const
 inline bool ObBasicSessionInfo::get_local_ob_enable_plan_cache() const
 {
   return sys_vars_cache_.get_ob_enable_plan_cache();
+}
+
+inline bool ObBasicSessionInfo::get_local_ob_enable_dynamic_sample() const
+{
+  return sys_vars_cache_.get_ob_enable_dynamic_sample();
 }
 
 inline bool ObBasicSessionInfo::get_local_ob_enable_sql_audit() const

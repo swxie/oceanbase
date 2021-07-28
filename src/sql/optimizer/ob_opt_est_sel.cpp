@@ -3622,7 +3622,9 @@ int ObOptEstSel::clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_se
   int ret = OB_SUCCESS;
   ObOptSampleService* service = NULL;
   LOG_INFO("use dynamic sample", K(qual));
-  if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))){
+  if (!(est_sel_info.get_session_info()->get_local_ob_enable_dynamic_sample())){
+    //do nothing
+  } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))){
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
   } else if (OB_FAIL(service->get_expr_selectivity(est_sel_info, qual, selectivity))){
