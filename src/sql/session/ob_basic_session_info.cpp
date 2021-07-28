@@ -1871,6 +1871,12 @@ OB_INLINE int ObBasicSessionInfo::process_session_variable(
       OX(sys_vars_cache_.set_ob_enable_trace_log(int_val != 0, is_inc));
       break;
     }
+    case SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE: {
+      int64_t int_val = 0;
+      OZ(val.get_int(int_val), val);
+      OX(sys_vars_cache_.set_ob_enable_dynamic_sample(int_val != 0, is_inc));
+      break;
+    }
     case SYS_VAR_OB_ORG_CLUSTER_ID: {
       int64_t int_val = 0;
       OZ(val.get_int(int_val), val);
@@ -2339,6 +2345,12 @@ int ObBasicSessionInfo::is_use_trace_log(bool& use_trace_log) const
   return OB_SUCCESS;
 }
 
+int ObBasicSessionInfo::is_use_dynamic_sample(bool& use_dynamic_sample) const
+{
+  use_dynamic_sample = sys_vars_cache_.get_ob_enable_dynamic_sample();
+  return OB_SUCCESS;
+}
+
 int ObBasicSessionInfo::is_use_transmission_checksum(bool& use_transmission_checksum) const
 {
   return get_bool_sys_var(SYS_VAR_OB_ENABLE_TRANSMISSION_CHECKSUM, use_transmission_checksum);
@@ -2763,6 +2775,7 @@ OB_DEF_SERIALIZE(ObBasicSessionInfo::SysVarsCacheData)
   LST_DO_CODE(OB_UNIS_ENCODE,
       autocommit_,
       ob_enable_trace_log_,
+      ob_enable_dynamic_sample_,
       ob_org_cluster_id_,
       ob_query_timeout_,
       ob_trx_timeout_,
@@ -2787,6 +2800,7 @@ OB_DEF_DESERIALIZE(ObBasicSessionInfo::SysVarsCacheData)
   LST_DO_CODE(OB_UNIS_DECODE,
       autocommit_,
       ob_enable_trace_log_,
+      ob_enable_dynamic_sample_,
       ob_org_cluster_id_,
       ob_query_timeout_,
       ob_trx_timeout_,
@@ -2815,6 +2829,7 @@ OB_DEF_SERIALIZE_SIZE(ObBasicSessionInfo::SysVarsCacheData)
   LST_DO_CODE(OB_UNIS_ADD_LEN,
       autocommit_,
       ob_enable_trace_log_,
+      ob_enable_dynamic_sample_,
       ob_org_cluster_id_,
       ob_query_timeout_,
       ob_trx_timeout_,
@@ -3558,6 +3573,7 @@ int ObBasicSessionInfo::is_sys_var_actully_changed(
       case SYS_VAR_OB_ENABLE_SQL_AUDIT:
       case SYS_VAR_AUTOCOMMIT:
       case SYS_VAR_OB_ENABLE_TRACE_LOG:
+      case SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE:
       case SYS_VAR_OB_ORG_CLUSTER_ID:
       case SYS_VAR_OB_QUERY_TIMEOUT:
       case SYS_VAR_OB_TRX_TIMEOUT:

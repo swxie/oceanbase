@@ -208,6 +208,7 @@ static const char* const OB_SV_PERFORMANCE_SCHEMA = "performance_schema";
 static const char* const OB_SV_NLS_CURRENCY = "nls_currency";
 static const char* const OB_SV_NLS_ISO_CURRENCY = "nls_iso_currency";
 static const char* const OB_SV_NLS_DUAL_CURRENCY = "nls_dual_currency";
+static const char* const OB_SV_ENABLE_DYNAMIC_SAMPLE = "ob_enable_dynamic_sample";
 
 }  // namespace share
 }  // namespace oceanbase
