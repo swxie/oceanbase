@@ -15,6 +15,7 @@
 #include "share/schema/ob_schema_getter_guard.h"
 #include "share/stat/ob_stat_manager.h"
 #include "share/stat/ob_opt_stat_manager.h"
+#include "share/stat/ob_opt_sample_service.h"
 #include "sql/session/ob_sql_session_info.h"
 #include "sql/rewrite/ob_query_range.h"
 #include "sql/optimizer/ob_table_location.h"
@@ -43,6 +44,7 @@ class ObOptimizerContext {
         stat_manager_(stat_manager),
         // TODO: modify this
         opt_stat_manager_(opt_stat_manager),
+        opt_sample_service_(exec_ctx),
         partition_service_(partition_service),
         allocator_(allocator),
         table_location_list_(),        // declared as auto free
@@ -87,6 +89,10 @@ class ObOptimizerContext {
   inline ObExecContext* get_exec_ctx() const
   {
     return exec_ctx_;
+  }
+  inline ObOptSampleService* get_sample_service() const
+  {
+    return const_cast<ObOptSampleService*>(&opt_sample_service_);
   }
   inline ObTaskExecutorCtx* get_task_exec_ctx() const
   {
@@ -300,6 +306,7 @@ class ObOptimizerContext {
   ObSqlSchemaGuard* sql_schema_guard_;
   common::ObStatManager* stat_manager_;
   common::ObOptStatManager* opt_stat_manager_;
+  ObOptSampleService opt_sample_service_;
   storage::ObPartitionService* partition_service_;
   common::ObIAllocator& allocator_;
   common::ObArray<ObTableLocation, common::ModulePageAllocator, true> table_location_list_;

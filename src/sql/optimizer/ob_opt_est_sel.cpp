@@ -3605,5 +3605,19 @@ int ObOptEstSel::is_valid_multi_join(ObIArray<ObRawExpr*>& quals, bool& is_valid
   return ret;
 }
 
+int ObOptEstSel::clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObRawExpr* qual, double& selectivity){
+  int ret = OB_SUCCESS;
+  ObOptSampleService* service = NULL;
+  if (OB_UNLIKELY(OB_ISNULL(est_sel_info.get_opt_ctx().get_sample_service()))){
+    ret = OB_ERR_NULL_VALUE;
+    LOG_WARN("get unexpected null", K(ret));
+  } else if (OB_FAIL(service->get_expr_selectivity(est_sel_info, qual, selectivity))){
+    LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
+    ret = OB_SUCCESS;//重置
+  }
+  return ret;
+
+}
+
 }  // end of namespace sql
 }  // end of namespace oceanbase

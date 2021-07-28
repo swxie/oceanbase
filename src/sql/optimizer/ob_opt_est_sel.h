@@ -692,6 +692,8 @@ class ObOptEstSel {
     return fabs(num) < OB_DOUBLE_EPSINON;
   }
 
+  static int clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObRawExpr* qual, double& selectivity);
+
   private:
   DISALLOW_COPY_AND_ASSIGN(ObOptEstSel);
 };
