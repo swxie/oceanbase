@@ -3622,7 +3622,6 @@ int ObOptEstSel::clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_se
   int ret = OB_SUCCESS;
   const ObSQLSessionInfo* session = NULL;
   ObOptSampleService* service = NULL;
-  LOG_WARN("yingnan debug 1");
   if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))){
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
