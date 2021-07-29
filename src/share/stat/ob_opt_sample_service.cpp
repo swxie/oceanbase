@@ -26,9 +26,7 @@ using namespace oceanbase::sql;
 namespace oceanbase {
 namespace common {
 
-ObOptSampleService::ObOptSampleService(ObExecContext* ctx) : inited_(false), tenant_id_(1), exec_ctx_(ctx)
-{
-  init();
+ObOptSampleService::ObOptSampleService(ObExecContext* ctx) : inited_(false), tenant_id_(1), exec_ctx_(ctx){
 }
 
 int ObOptSampleService::init()
@@ -42,7 +40,6 @@ int ObOptSampleService::init()
     LOG_WARN("Faile to get mysql proxy", K(ret));
   } else if (OB_FAIL(count_map_.create(11, ObModIds::OB_HASH_BUCKET_PLAN_STAT, ObModIds::OB_HASH_NODE_PLAN_STAT)) ||
              expr_map_.create(11, ObModIds::OB_HASH_BUCKET_PLAN_STAT, ObModIds::OB_HASH_NODE_PLAN_STAT)) {
-    ret = OB_INIT_FAIL;
     LOG_WARN("Faile to init dynamic sample service", K(ret));
   } else {
     inited_ = true;
@@ -55,8 +52,9 @@ int ObOptSampleService::get_expr_selectivity(
 {
   int ret = OB_SUCCESS;
   double selectivity = 0.0;
+  LOG_WARN("yingnan debug", K(ret));
   ObExprPtr ptr(qual);
-  if (!inited_) {
+  if (!inited_ && OB_FAIL(init())) {
     ret = OB_NOT_INIT;
     LOG_WARN("sql service has not initialized.", K(ret));
   } else if (OB_ISNULL(qual)) {  //检查qual合法性

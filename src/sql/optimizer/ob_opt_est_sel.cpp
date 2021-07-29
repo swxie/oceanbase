@@ -3620,13 +3620,17 @@ int ObOptEstSel::is_valid_multi_join(ObIArray<ObRawExpr*>& quals, bool& is_valid
 
 int ObOptEstSel::clause_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObRawExpr* qual, double& selectivity){
   int ret = OB_SUCCESS;
+  const ObSQLSessionInfo* session = NULL;
   ObOptSampleService* service = NULL;
-  LOG_INFO("use dynamic sample", K(qual));
-  if (!(est_sel_info.get_session_info()->get_local_ob_enable_dynamic_sample())){
-    //do nothing
+  LOG_WARN("yingnan debug 1");
+  if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))){
+    ret = OB_ERR_NULL_VALUE;
+    LOG_WARN("get unexpected null", K(ret));
   } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))){
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
+  } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()){
+    //do nothing
   } else if (OB_FAIL(service->get_expr_selectivity(est_sel_info, qual, selectivity))){
     LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
     ret = OB_SUCCESS;//重置
