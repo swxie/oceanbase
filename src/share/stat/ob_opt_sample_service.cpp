@@ -52,7 +52,6 @@ int ObOptSampleService::get_expr_selectivity(
 {
   int ret = OB_SUCCESS;
   double selectivity = 0.0;
-  LOG_WARN("yingnan debug", K(ret));
   ObExprPtr ptr(qual);
   if (!inited_ && OB_FAIL(init())) {
     ret = OB_NOT_INIT;
@@ -221,6 +220,7 @@ int ObOptSampleService::generate_innersql(ObSEArray<sql::TableItem*, 3>& cur_tab
 int ObOptSampleService::fetch_dynamic_stat(ObSqlString& sql, double& selectivity)
 {
   int ret = OB_SUCCESS;
+  LOG_WARN("yingnan debug", K(sql));
   DEFINE_SQL_CLIENT_RETRY_WEAK_FOR_STAT(mysql_proxy_);
   SMART_VAR(ObMySQLProxy::MySQLResult, res)
   {
@@ -259,8 +259,6 @@ int ObOptSampleService::cast_number_to_double(const number::ObNumber& src_val, d
     LOG_WARN("failed to cast number to double type", K(ret));
   } else if (OB_FAIL(dest_obj.get_double(dst_val))) {
     LOG_WARN("failed to get double", K(ret));
-  } else {
-    LOG_WARN("succeed to cast number to double", K(src_val), K(dst_val));
   }
   return ret;
 }
