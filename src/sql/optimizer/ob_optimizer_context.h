@@ -44,7 +44,41 @@ class ObOptimizerContext {
         stat_manager_(stat_manager),
         // TODO: modify this
         opt_stat_manager_(opt_stat_manager),
-        opt_sample_service_(exec_ctx),
+        sample_service_agent_(exec_ctx),
+        partition_service_(partition_service),
+        allocator_(allocator),
+        table_location_list_(),        // declared as auto free
+        table_partition_info_list_(),  // declared as auto free
+        location_cache_(location_cache),
+        server_(addr),
+        srv_proxy_(srv_proxy),  // for `estimate storage` only
+        params_(params),
+        merged_version_(merged_version),
+        query_hint_(query_hint),
+        expr_factory_(expr_factory),
+        log_plan_factory_(allocator),
+        use_pdml_(false),
+        parallel_(1),
+        fd_item_factory_(allocator),
+        enable_batch_opt_(-1),
+        force_default_stat_(false),
+        eval_plan_cost_(false),
+        root_stmt_(root_stmt),
+        px_parallel_rule_(PXParallelRule::USE_PX_DEFAULT)
+  {}
+  ObOptimizerContext(ObSQLSessionInfo* session_info, ObExecContext* exec_ctx, ObSqlSchemaGuard* sql_schema_guard,
+      common::ObStatManager* stat_manager, common::ObOptStatManager* opt_stat_manager, common::ObOptSampleServiceAgent sample_service_agent,
+      storage::ObPartitionService* partition_service, common::ObIAllocator& allocator,
+      share::ObIPartitionLocationCache* location_cache, const ParamStore* params, common::ObAddr& addr,
+      obrpc::ObSrvRpcProxy* srv_proxy, int64_t merged_version, ObQueryHint& query_hint, ObRawExprFactory& expr_factory,
+      ObDMLStmt* root_stmt)
+      : session_info_(session_info),
+        exec_ctx_(exec_ctx),
+        sql_schema_guard_(sql_schema_guard),
+        stat_manager_(stat_manager),
+        // TODO: modify this
+        opt_stat_manager_(opt_stat_manager),
+        sample_service_agent_(sample_service_agent),
         partition_service_(partition_service),
         allocator_(allocator),
         table_location_list_(),        // declared as auto free
@@ -92,8 +126,14 @@ class ObOptimizerContext {
   }
   inline ObOptSampleService* get_sample_service() const
   {
-    return const_cast<ObOptSampleService*>(&opt_sample_service_);
+    return sample_service_agent_.get_service();
   }
+
+  inline ObOptSampleServiceAgent get_sample_service_agent() const
+  {
+    return sample_service_agent_;
+  }
+
   inline ObTaskExecutorCtx* get_task_exec_ctx() const
   {
     ObTaskExecutorCtx* ctx = NULL;
@@ -306,7 +346,7 @@ class ObOptimizerContext {
   ObSqlSchemaGuard* sql_schema_guard_;
   common::ObStatManager* stat_manager_;
   common::ObOptStatManager* opt_stat_manager_;
-  ObOptSampleService opt_sample_service_;
+  common::ObOptSampleServiceAgent sample_service_agent_;
   storage::ObPartitionService* partition_service_;
   common::ObIAllocator& allocator_;
   common::ObArray<ObTableLocation, common::ModulePageAllocator, true> table_location_list_;

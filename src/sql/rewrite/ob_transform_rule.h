@@ -14,12 +14,14 @@
 #define _OCEANBASE_SQL_REWRITE_RULE_H
 #include "lib/container/ob_se_array.h"
 #include "sql/resolver/dml/ob_raw_expr_sets.h"
+#include "share/stat/ob_opt_sample_service.h"
 namespace oceanbase {
 namespace common {
 class ObIAllocator;
 class ObAddr;
 class ObStatManager;
 class ObOptStatManager;
+class ObOptSampleServiceAgent;
 }  // namespace common
 namespace share {
 class ObIPartitionLocationCache;
@@ -70,6 +72,7 @@ struct ObTransformerCtx {
   ObStmtFactory* stmt_factory_;
   share::ObIPartitionLocationCache* partition_location_cache_;
   common::ObStatManager* stat_mgr_;
+  common::ObOptSampleServiceAgent sample_service_agent_;
   common::ObOptStatManager* opt_stat_mgr_;
   storage::ObPartitionService* partition_service_;
   ObSqlSchemaGuard* sql_schema_guard_;

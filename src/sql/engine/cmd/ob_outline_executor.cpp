@@ -217,7 +217,8 @@ int ObOutlineExecutor::generate_logical_plan(
                  opt_ctx.get_merged_version(),
                  phy_plan,
                  ctx,
-                 outline_stmt))) {
+                 outline_stmt, 
+                 opt_ctx.get_sample_service_agent()))) {
     LOG_WARN("fail to transform outline stmt", K(ret));
   } else if (OB_FAIL(ObSql::optimize_stmt(optimizer, *session_info, *outline_stmt, logical_plan))) {
     LOG_WARN("fail to optimize stmt", K(ret));

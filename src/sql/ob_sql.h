@@ -42,6 +42,7 @@ class ObOutlineInfo;
 }  // namespace share
 namespace common {
 class ObOptStatManager;
+class ObOptSampleServiceAgent;
 }
 namespace sql {
 struct ObStmtPrepareResult;
@@ -150,7 +151,7 @@ class ObSql {
   static int transform_stmt(ObSqlSchemaGuard* sql_schema_guard,
       share::ObIPartitionLocationCache* partition_location_cache, storage::ObPartitionService* partition_service,
       common::ObStatManager* stat_mgr, common::ObOptStatManager* opt_stat_mgr, common::ObAddr* self_addr,
-      int64_t merged_version, ObPhysicalPlan* phy_plan, ObExecContext& exec_ctx, ObDMLStmt*& stmt);
+      int64_t merged_version, ObPhysicalPlan* phy_plan, ObExecContext& exec_ctx, ObDMLStmt*& stmt, ObOptSampleServiceAgent sample_service_agent);
 
   // optimize stmt, generate logical_plan
   static int optimize_stmt(

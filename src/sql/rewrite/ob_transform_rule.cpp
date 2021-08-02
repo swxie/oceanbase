@@ -233,6 +233,7 @@ int ObTransformRule::evaluate_cost(common::ObIArray<ObParentDMLStmt>& parent_stm
           ctx_->sql_schema_guard_,
           ctx_->stat_mgr_,
           ctx_->opt_stat_mgr_,
+          ctx_->sample_service_agent_,
           ctx_->partition_service_,
           mem_context->get_arena_allocator(),
           &optimizer_location_cache,
