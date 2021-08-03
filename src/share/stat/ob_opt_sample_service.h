@@ -81,8 +81,8 @@ public:
   int get_single_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals, double& selectivity);
   
   //添加了连接参数
-  int get_join_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals, double& selectivity, ObJoinType join_type, const ObRelIds* left_rel_ids,
-    const ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count);
+  int get_join_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals, double& selectivity, sql::ObJoinType join_type, const sql::ObRelIds* left_rel_ids,
+    const sql::ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count);
 
 private:
   bool inited_;

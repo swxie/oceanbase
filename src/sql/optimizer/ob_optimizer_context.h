@@ -44,7 +44,7 @@ class ObOptimizerContext {
         stat_manager_(stat_manager),
         // TODO: modify this
         opt_stat_manager_(opt_stat_manager),
-        sample_service_agent_(exec_ctx),
+        sample_service_pointer_(exec_ctx),
         partition_service_(partition_service),
         allocator_(allocator),
         table_location_list_(),        // declared as auto free
@@ -67,7 +67,7 @@ class ObOptimizerContext {
         px_parallel_rule_(PXParallelRule::USE_PX_DEFAULT)
   {}
   ObOptimizerContext(ObSQLSessionInfo* session_info, ObExecContext* exec_ctx, ObSqlSchemaGuard* sql_schema_guard,
-      common::ObStatManager* stat_manager, common::ObOptStatManager* opt_stat_manager, common::ObOptSampleServiceAgent sample_service_agent,
+      common::ObStatManager* stat_manager, common::ObOptStatManager* opt_stat_manager, common::ObOptSampleServicePointer sample_service_pointer,
       storage::ObPartitionService* partition_service, common::ObIAllocator& allocator,
       share::ObIPartitionLocationCache* location_cache, const ParamStore* params, common::ObAddr& addr,
       obrpc::ObSrvRpcProxy* srv_proxy, int64_t merged_version, ObQueryHint& query_hint, ObRawExprFactory& expr_factory,
@@ -78,7 +78,7 @@ class ObOptimizerContext {
         stat_manager_(stat_manager),
         // TODO: modify this
         opt_stat_manager_(opt_stat_manager),
-        sample_service_agent_(sample_service_agent),
+        sample_service_pointer_(sample_service_pointer),
         partition_service_(partition_service),
         allocator_(allocator),
         table_location_list_(),        // declared as auto free
@@ -126,12 +126,12 @@ class ObOptimizerContext {
   }
   inline ObOptSampleService* get_sample_service() const
   {
-    return sample_service_agent_.get_service();
+    return sample_service_pointer_.get_service();
   }
 
-  inline ObOptSampleServiceAgent get_sample_service_agent() const
+  inline ObOptSampleServicePointer get_sample_service_pointer() const
   {
-    return sample_service_agent_;
+    return sample_service_pointer_;
   }
 
   inline ObTaskExecutorCtx* get_task_exec_ctx() const
@@ -346,7 +346,7 @@ class ObOptimizerContext {
   ObSqlSchemaGuard* sql_schema_guard_;
   common::ObStatManager* stat_manager_;
   common::ObOptStatManager* opt_stat_manager_;
-  common::ObOptSampleServiceAgent sample_service_agent_;
+  common::ObOptSampleServicePointer sample_service_pointer_;
   storage::ObPartitionService* partition_service_;
   common::ObIAllocator& allocator_;
   common::ObArray<ObTableLocation, common::ModulePageAllocator, true> table_location_list_;

@@ -21,7 +21,7 @@ class ObIAllocator;
 class ObAddr;
 class ObStatManager;
 class ObOptStatManager;
-class ObOptSampleServiceAgent;
+class ObOptSampleServicePointer;
 }  // namespace common
 namespace share {
 class ObIPartitionLocationCache;
@@ -72,7 +72,7 @@ struct ObTransformerCtx {
   ObStmtFactory* stmt_factory_;
   share::ObIPartitionLocationCache* partition_location_cache_;
   common::ObStatManager* stat_mgr_;
-  common::ObOptSampleServiceAgent sample_service_agent_;
+  common::ObOptSampleServicePointer sample_service_pointer_;
   common::ObOptStatManager* opt_stat_mgr_;
   storage::ObPartitionService* partition_service_;
   ObSqlSchemaGuard* sql_schema_guard_;
