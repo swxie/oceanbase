@@ -6653,7 +6653,8 @@ int ObPGStorage::restore_mem_trans_table()
     ret = OB_NOT_INIT;
     LOG_WARN("pg storage is not inited", K(ret));
   } else if (FALSE_IT(restore_state = get_restore_state())) {
-  } else if (!has_memstore() && REPLICA_NOT_RESTORE == restore_state) {
+  } else if ((!has_memstore() && REPLICA_NOT_RESTORE == restore_state) ||
+              ObReplicaTypeCheck::is_log_replica(meta_->replica_type_)) {
     // do nothing
     FLOG_INFO("no need to restore mem trans table", K_(pkey), K(restore_state));
   } else if (OB_FAIL(trans_table_pkey.generate_trans_table_pkey(pkey_))) {
@@ -7994,6 +7995,7 @@ int ObPGStorage::update_restore_points(
 {
   int ret = OB_SUCCESS;
   ObSEArray<int64_t, 1> snapshot_versions;
+  const bool is_restore_point = true;
   if (IS_NOT_INIT) {
     ret = OB_NOT_INIT;
     LOG_WARN("pg storage is not inited", K(ret));
@@ -8014,7 +8016,7 @@ int ObPGStorage::update_restore_points(
         LOG_WARN("failed to check restore point exist", K(ret), K_(pkey), K(restore_points));
       } else if (!is_exist) {
         if (OB_FAIL(
-                get_restore_point_tables_(snapshot_ts, schema_version, pg_meta, metas, handle, is_ready, is_need))) {
+                get_restore_point_tables_(snapshot_ts, schema_version, is_restore_point, pg_meta, metas, handle, is_ready, is_need))) {
           LOG_WARN("failed to get restore point sstables", K(ret), K_(pkey), K(snapshot_ts));
         } else if (!is_need) {
           // do nothing
@@ -8046,6 +8048,7 @@ int ObPGStorage::update_backup_points(
 {
   int ret = OB_SUCCESS;
   ObSEArray<int64_t, 1> snapshot_versions;
+  const bool is_restore_point = false;
   for (int64_t i = 0; OB_SUCC(ret) && i < backup_points.count(); i++) {
     const int64_t snapshot_ts = backup_points.at(i);
     const int64_t schema_version = schema_versions.at(i);
@@ -8058,7 +8061,7 @@ int ObPGStorage::update_backup_points(
     if (OB_FAIL(recovery_point_data_mgr_.check_backup_point_exist(snapshot_ts, is_exist))) {
       LOG_WARN("failed to check restore point exist", K(ret), K_(pkey), K(backup_points));
     } else if (!is_exist) {
-      if (OB_FAIL(get_restore_point_tables_(snapshot_ts, schema_version, pg_meta, metas, handle, is_ready, is_need))) {
+      if (OB_FAIL(get_restore_point_tables_(snapshot_ts, schema_version, is_restore_point, pg_meta, metas, handle, is_ready, is_need))) {
         LOG_WARN("failed to get restore point sstables", K(ret), K_(pkey), K(snapshot_ts));
       } else if (!is_need) {
         // do nothing
@@ -8105,7 +8108,7 @@ int ObPGStorage::get_backup_partition_meta_data(const ObPartitionKey& pkey, cons
   return ret;
 }
 
-int ObPGStorage::get_restore_point_tables_(const int64_t snapshot_version, const int64_t schema_version,
+int ObPGStorage::get_restore_point_tables_(const int64_t snapshot_version, const int64_t schema_version, const bool is_restore_point,
     ObPartitionGroupMeta& pg_meta, ObIArray<ObPGPartitionStoreMeta>& partition_metas, ObTablesHandle& handle,
     bool& is_ready, bool& is_need)
 {
@@ -8151,7 +8154,7 @@ int ObPGStorage::get_restore_point_tables_(const int64_t snapshot_version, const
   } else if (FALSE_IT(minor_schema_version = minor_schema_version < max_sstable_schema_version
                                                  ? max_sstable_schema_version
                                                  : minor_schema_version)) {
-  } else if (OB_FAIL(schema_filter.init(tenant_id, real_schema_version, minor_schema_version))) {
+  } else if (OB_FAIL(schema_filter.init(tenant_id, is_restore_point, real_schema_version, minor_schema_version))) {
     LOG_WARN("failed to init backup schema checker",
         K(ret),
         K(pkey_),

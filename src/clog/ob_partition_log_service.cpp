@@ -1202,7 +1202,7 @@ int ObPartitionLogService::check_and_set_restore_progress()
       CLOG_LOG(WARN, "failed to check_if_all_log_replayed", K(ret), K_(partition_key));
     } else if (!has_replayed) {
     } else {
-      // check whether achived offline_log
+      // check whether archived offline_log
       if (!restore_mgr_.has_fetched_enough_log()) {
         uint64_t offline_log_id = OB_INVALID_ID;
         if (OB_FAIL(partition_service_->get_offline_log_id(partition_key_, offline_log_id))) {
@@ -1737,7 +1737,7 @@ int ObPartitionLogService::receive_archive_log(const ObLogEntry& log_entry, cons
         "receive_archive_log in unexpected state",
         K_(partition_key),
         K(ret),
-        "is_archive_resotring",
+        "is_archive_restoring",
         restore_mgr_.is_archive_restoring(),
         "role",
         restore_mgr_.get_role(),
@@ -1939,7 +1939,7 @@ int ObPartitionLogService::ack_log(const ObAddr& server, const uint64_t log_id, 
     }
     ret = OB_STATE_NOT_MATCH;
   } else if (!is_in_curr_member_list) {
-    // if not paxos memeber, record ts and skip majority count
+    // if not paxos member, record ts and skip majority count
   } else if (LEADER == state_mgr_.get_role() || STANDBY_LEADER == state_mgr_.get_role()) {
     // only leader need to count majority, other parent skip
     CLOG_LOG(DEBUG, "ack_log", K_(partition_key), K(server), K(log_id));
@@ -2119,7 +2119,7 @@ int ObPartitionLogService::ack_renew_ms_log(
       CLOG_LOG(WARN, "majority cb failed", K_(partition_key), K(ret), K(log_id));
     } else {
     }
-    CLOG_LOG(INFO, "ack_renew_ms_log fnished", K_(partition_key), K(server), K(log_id), K(ms_proposal_id), K(majority));
+    CLOG_LOG(INFO, "ack_renew_ms_log finished", K_(partition_key), K(server), K(log_id), K(ms_proposal_id), K(majority));
   }
 
   return ret;
@@ -2922,8 +2922,15 @@ int ObPartitionLogService::fetch_log_from_ilog_storage_(const uint64_t log_id, c
     CLOG_LOG(INFO, "this replica need rebuild", K(ret), K(server), K(partition_key_), K(log_id), K(read_from_clog));
     uint64_t last_replay_log_id = OB_INVALID_ID;
     if (OB_FAIL(get_storage_last_replay_log_id_(last_replay_log_id))) {
-      CLOG_LOG(WARN, "get_storage_last_replay_log_id_ failed", K(ret), K(partition_key_), K(log_id), K(fetch_type),
-          K(proposal_id), K(server), K(need_send_confirm_info));
+      CLOG_LOG(WARN,
+          "get_storage_last_replay_log_id_ failed",
+          K(ret),
+          K(partition_key_),
+          K(log_id),
+          K(fetch_type),
+          K(proposal_id),
+          K(server),
+          K(need_send_confirm_info));
     } else if (log_id > last_replay_log_id) {
       ret = OB_ERR_UNEXPECTED;
       CLOG_LOG(ERROR,
@@ -3167,7 +3174,7 @@ int ObPartitionLogService::handle_query_sync_start_id_req(
   } else {
     ObCascadMember sync_child = cascading_mgr_.get_sync_standby_child();
     if (!sync_child.is_valid() || sync_child.get_server() != server) {
-      // update sync_starndby_child
+      // update sync_standby_child
       (void)cascading_mgr_.update_sync_standby_child(server, cluster_id);
     }
     const uint64_t max_log_id = sw_.get_max_log_id();
@@ -3258,7 +3265,7 @@ int ObPartitionLogService::primary_process_protect_mode_switch()
     ret = OB_NOT_INIT;
   } else if (!GCTX.is_primary_cluster() ||
              ObMultiClusterUtil::is_cluster_private_table(partition_key_.get_table_id())) {
-    // skip primary or private raplica
+    // skip primary or private replica
   } else {
     common::ObTimeGuard timeguard("primary_protect_mode_switch", 1000 * 1000);
     // need use wlock to protect role
@@ -3856,7 +3863,7 @@ int ObPartitionLogService::on_get_election_priority(election::ObElectionPriority
     bool is_standby_restore_finished = true;
     if (GCTX.can_be_parent_cluster() && !ObMultiClusterUtil::is_cluster_private_table(partition_key_.get_table_id()) &&
         restore_mgr_.is_standby_restore_state()) {
-      // restoring replicas cannot be striong leader,
+      // restoring replicas cannot be strong leader,
       // because its last_submit_ts maybe invalid, which will lead to reconfirm failure
       is_standby_restore_finished = false;
     }
@@ -4100,7 +4107,7 @@ void ObPartitionLogService::destroy()
     reconfirm_.reset();
     log_engine_ = NULL;
     replay_engine_ = NULL;
-    // partition_service_ is a global signleton obj, no need set NULL
+    // partition_service_ is a global singleton obj, no need set NULL
     // partition_service_ = NULL;
     if (mm_.is_inited()) {
       mm_.destroy();
@@ -4352,7 +4359,7 @@ int ObPartitionLogService::is_log_sync_with_leader(bool& is_sync) const
 
 int ObPartitionLogService::is_log_sync_with_primary(const int64_t switchover_epoch, bool& is_sync) const
 {
-  // caller guarantees self is non-private talbe
+  // caller guarantees self is non-private table
   int ret = OB_SUCCESS;
   int64_t local_switchover_epoch = OB_INVALID_TIMESTAMP;
   uint64_t leader_max_log_id = OB_INVALID_ID;
@@ -5891,9 +5898,9 @@ int ObPartitionLogService::send_confirm_info_(const common::ObAddr& server, cons
     const uint64_t log_id = log_entry.get_header().get_log_id();
     ObConfirmedInfo confirmed_info;
     if (OB_SUCCESS != (ret = confirmed_info.init(log_entry.get_header().get_data_checksum(),
-                                                 log_entry.get_header().get_epoch_id(),
-                                                 accum_checksum,
-                                                 log_entry.get_header().get_submit_timestamp()))) {
+                           log_entry.get_header().get_epoch_id(),
+                           accum_checksum,
+                           log_entry.get_header().get_submit_timestamp()))) {
       CLOG_LOG(WARN, "confirmed_info init failed", K_(partition_key), K(ret));
     } else if (OB_SUCCESS != (ret = log_engine_->submit_confirmed_info(
                                   list, partition_key_, log_id, confirmed_info, batch_committed))) {
@@ -5906,20 +5913,6 @@ int ObPartitionLogService::send_confirm_info_(const common::ObAddr& server, cons
           K(confirmed_info),
           K(batch_committed));
     }
-  }
-  return ret;
-}
-
-int ObPartitionLogService::get_next_timestamp(const uint64_t last_log_id, int64_t& res_ts)
-{
-  int ret = OB_SUCCESS;
-  if (IS_NOT_INIT) {
-    ret = OB_NOT_INIT;
-  } else if (OB_UNLIKELY(OB_INVALID_ID == last_log_id)) {
-    ret = OB_INVALID_ARGUMENT;
-    CLOG_LOG(WARN, "get next timestamp error", K(ret), K(last_log_id));
-  } else {
-    ret = sw_.get_next_timestamp(last_log_id, res_ts);
   }
   return ret;
 }
@@ -5947,7 +5940,7 @@ int ObPartitionLogService::leader_update_next_replay_log_ts_under_lock()
   if (!ObMultiClusterUtil::is_cluster_private_table(partition_key_.get_table_id())) {
     if (GCTX.is_primary_cluster() || GCTX.is_in_flashback_state() || GCTX.is_in_cleanup_state()) {
       // non-private leader only in flashback/cleanup state can advance next_log_ts
-      // it cannot do this in swithing state, which may lead conflict with new primary cluster
+      // it cannot do this in switching state, which may lead conflict with new primary cluster
       is_cluster_status_allow_update = true;
     } else {
       is_cluster_status_allow_update = false;
@@ -6109,7 +6102,7 @@ int ObPartitionLogService::notify_log_missing(
     RLockGuard guard(lock_);
     const common::ObReplicaType replica_type = mm_.get_replica_type();
     if (!restore_mgr_.is_standby_restore_state()) {
-      CLOG_LOG(INFO, "self is not in restore state, igore msg", K_(partition_key), K(src_server));
+      CLOG_LOG(INFO, "self is not in restore state, ignore msg", K_(partition_key), K(src_server));
     } else if (FOLLOWER != state_mgr_.get_role()) {
       CLOG_LOG(WARN, "self is not follower, igore msg", K_(partition_key), K(src_server));
     } else if (ObReplicaTypeCheck::is_paxos_replica_V2(replica_type) && !is_in_member_list) {
@@ -6697,7 +6690,7 @@ int ObPartitionLogService::check_is_normal_partition(bool& is_normal_partition) 
   return ret;
 }
 
-//==================== batch chagne member begin ====================
+//==================== batch change member begin ====================
 int ObPartitionLogService::pre_change_member(const int64_t quorum, const bool is_add_member, int64_t& mc_timestamp,
     ObMemberList& member_list, ObProposalID& proposal_id)
 {
@@ -7053,7 +7046,7 @@ int ObPartitionLogService::leader_send_max_log_info()
     {
       RLockGuard guard(lock_);
       if (!state_mgr_.is_leader_active() || state_mgr_.is_offline()) {
-        // self is follwer or offline, skip
+        // self is follower or offline, skip
         is_online_leader = false;
       } else {
         is_online_leader = true;
@@ -8271,8 +8264,7 @@ int ObPartitionLogService::check_and_try_leader_revoke(const ObElection::RevokeT
       CLOG_LOG(ERROR, "check_majority_replica_clog_disk_full_ failed", K(ret));
     } else {
       need_revoke = !majority_is_clog_disk_full;
-      CLOG_LOG(INFO, "partition may need revoke, ", "need revoke is ", need_revoke,
-               "and revoke type is ", revoke_type);
+      CLOG_LOG(INFO, "partition may need revoke, ", "need revoke is ", need_revoke, "and revoke type is ", revoke_type);
     }
   }
 
@@ -8460,5 +8452,5 @@ int ObPartitionLogService::get_role_and_leader_epoch_unlock_(
   return ret;
 }
 
-} // namespace clog
-} // namespace oceanbase
+}  // namespace clog
+}  // namespace oceanbase

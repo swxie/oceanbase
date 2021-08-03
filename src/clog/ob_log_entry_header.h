@@ -155,7 +155,10 @@ public:
     }
     return log_ts;
   }
-  void set_submit_timestamp(const int64_t ts) { submit_timestamp_ = ts; }
+  void set_submit_timestamp(const int64_t ts)
+  {
+    submit_timestamp_ = ts;
+  }
   bool is_batch_committed() const
   {
     bool bool_ret = false;
@@ -182,7 +185,7 @@ public:
   }
 
   // Serialize submit_timestamp at specified offset
-  int serialize_submit_timestamp(char *buf, const int64_t buf_len, int64_t &pos);
+  int serialize_submit_timestamp(char* buf, const int64_t buf_len, int64_t& pos);
 
   static bool check_magic_number(const int16_t magic_number)
   {
@@ -234,7 +237,7 @@ private:
   int64_t data_checksum_;
   common::ObVersion freeze_version_;
 
-  // The checksum of log header, acquirements:
+  // The checksum of log header, acquirement:
   // 1. Must locate in the last line of class declaration
   // 2. Must not exist virtual funtion
   // 3. Must keep the variable before this is 64-bit aligned

@@ -635,7 +635,7 @@ int ObLogReconfirm::try_filter_invalid_log_()
       if (OB_LOG_NOP == header->get_log_type()) {
         const ObProposalID curr_proposal_id = state_mgr_->get_proposal_id();
         header->set_log_type(OB_LOG_TRUNCATE);       // update log_type
-        header->set_epoch_id(curr_proposal_id.ts_);  // updatge epoch_id
+        header->set_epoch_id(curr_proposal_id.ts_);  // update epoch_id
         header->update_header_checksum();            // update header_checksum
         // advance leader_ts_ to filter subsequent logs
         leader_ts_ = header->get_epoch_id();
@@ -798,8 +798,8 @@ int ObLogReconfirm::confirm_log_()
             if (OB_FAIL(try_update_nop_or_truncate_timestamp(*header))) {
               CLOG_LOG(WARN, "try_update_nop_or_truncate_timestamp fail", K(ret), K_(partition_key));
             } else if (OB_FAIL(sw_->submit_log(log_ptr->get_header(), log_ptr->get_buf(), NULL))) {
-              CLOG_LOG(WARN, "submit log failed", K_(partition_key), K(ret), K_(next_id),
-                       K_(start_id), K_(max_flushed_id));
+              CLOG_LOG(
+                  WARN, "submit log failed", K_(partition_key), K(ret), K_(next_id), K_(start_id), K_(max_flushed_id));
               break;
             } else {
               CLOG_LOG(TRACE, "submit log success", K_(partition_key), K_(next_id), K_(start_id), K_(max_flushed_id));
@@ -814,7 +814,7 @@ int ObLogReconfirm::confirm_log_()
           next_id_++;
         }
       }
-    } // end while
+    }  // end while
 
     // In case of rebuild in leader reconfirm:
     // 1. when majority has already recycled specified log, the follower
@@ -832,15 +832,17 @@ int ObLogReconfirm::confirm_log_()
       const uint64_t new_start_id = sw_->get_start_id();
       if (new_start_id > next_id_) {
         next_id_ = new_start_id;
-        CLOG_LOG(INFO, "there may execute a rebuild operation in\
-            leader reconfirm", K(ret), K(new_start_id), K(next_id_));
+        CLOG_LOG(INFO,
+            "there may execute a rebuild operation in\
+            leader reconfirm",
+            K(ret),
+            K(new_start_id),
+            K(next_id_));
       }
       ret = OB_SUCCESS;
     }
 
-    if (OB_SUCC(ret)
-        && next_id_ <= max_flushed_id_
-        && next_id_ >= log_info_array_.get_end_id()) {
+    if (OB_SUCC(ret) && next_id_ <= max_flushed_id_ && next_id_ >= log_info_array_.get_end_id()) {
       // process next log_range
       if (OB_EAGAIN == (ret = init_log_info_range_(next_id_))) {
         // ret is EAGAIN when some log has slide out, need update next_id_
@@ -1374,7 +1376,7 @@ int ObLogReconfirm::receive_log(const ObLogEntry& log_entry, const ObAddr& serve
     const uint64_t range_start_id = log_info_array_.get_start_id();
     const uint64_t range_end_id = log_info_array_.get_end_id();
     if (START_WORKING == state_) {
-      CLOG_LOG(INFO, "reveive log in START_WORKING state, ignore", K_(state), K_(partition_key), K(log_id));
+      CLOG_LOG(INFO, "receive log in START_WORKING state, ignore", K_(state), K_(partition_key), K(log_id));
     } else if (state_ != RECONFIRMING) {
       ret = OB_STATE_NOT_MATCH;
       CLOG_LOG(WARN, "receive log in wrong state", K(ret), K_(state), K_(partition_key), K(server), K(log_id));
@@ -1488,7 +1490,7 @@ int ObLogReconfirm::generate_nop_log_(const uint64_t log_id, const int64_t idx)
   } else {
     ObLogEntryHeader header;
     ObLogEntry log_entry;
-    // set proposal_id to 0, ensure that if there is a valid log, it will be rewrited
+    // set proposal_id to 0, ensure that if there is a valid log, it will be rewritten
     // set epoch_id_ to 0, it will be filtered out later
     ObProposalID invalid_proposal_id;
     const bool is_trans_log = false;

@@ -1564,6 +1564,7 @@ int ObPartitionService::log_new_partition(ObIPartitionGroup* partition, const in
     } else if (OB_FAIL(partition->get_pg_storage().restore_mem_trans_table())) {
       LOG_WARN("failed to restore_mem_trans_table", K(pkey), K(ret));
     } else {
+      partition->get_pg_storage().online();
       STORAGE_LOG(INFO, "log new partition success", K(pkey));
     }
   }
@@ -2510,6 +2511,10 @@ void ObPartitionService::free_partition_list(ObArray<ObIPartitionGroup*>& partit
 int ObPartitionService::remove_duplicate_partitions(const ObIArray<ObCreatePartitionArg>& batch_arg)
 {
   int ret = OB_SUCCESS;
+  const int MAX_RETRY_TIMES = 50;
+  const int USLEEP_TIME = 1000 * 100; // 100 ms
+  bool need_retry = true;
+  int retry_times = 0;
 
   if (OB_UNLIKELY(!is_inited_)) {
     ret = OB_NOT_INIT;
@@ -2524,6 +2529,31 @@ int ObPartitionService::remove_duplicate_partitions(const ObIArray<ObCreateParti
         STORAGE_LOG(ERROR, "pg_key not equal to pkey", K(ret), K(pkey), K(arg.pg_key_));
       } else if (arg.ignore_member_list_ && is_partition_exist(pkey) && OB_FAIL(remove_partition(pkey))) {
         STORAGE_LOG(WARN, "fail to remove duplicate partition", K(ret), K(pkey));
+      }
+    }
+    if (OB_FAIL(ret)) {
+    } else {
+      while (need_retry && retry_times < MAX_RETRY_TIMES) {
+        need_retry = false;
+        for (int i = 0; i < batch_arg.count(); ++i) {
+          const ObCreatePartitionArg &arg = batch_arg.at(i);
+          const ObPartitionKey &pkey = arg.partition_key_;
+          if (arg.ignore_member_list_
+              && (OB_ENTRY_EXIST == partition_map_.contains_key(pkey))) {
+            need_retry = true;
+            if (REACH_TIME_INTERVAL(100 * 1000)) {
+              STORAGE_LOG(WARN, "partition still exist, need retry. ", K(pkey));
+            }
+            break;
+          }
+        }
+        if (need_retry) {
+          usleep(USLEEP_TIME); // 100 ms
+        }
+        retry_times++;
+      }
+      if (need_retry && retry_times == MAX_RETRY_TIMES) {
+        ret = OB_EAGAIN;
       }
     }
   }
@@ -11672,10 +11702,24 @@ int ObPartitionService::check_all_partition_sync_state(const int64_t switchover_
         ret = OB_ERR_UNEXPECTED;
         STORAGE_LOG(WARN, "get_log_service return NULL");
       } else {
+        int64_t local_schema_version = OB_INVALID_VERSION;
+        int64_t pg_create_schema_version = OB_INVALID_VERSION;
         const common::ObPartitionKey pkey = partition->get_partition_key();
+        const uint64_t tenant_id_for_get_schema = is_inner_table(pkey.get_table_id()) ? OB_SYS_TENANT_ID : pkey.get_tenant_id();
         int tmp_ret = OB_SUCCESS;
         bool is_sync = false;
-        if (!ObMultiClusterUtil::is_cluster_private_table(pkey.get_table_id())) {
+
+        if (OB_FAIL(partition->get_pg_storage().get_create_schema_version(pg_create_schema_version))) {
+          if (REACH_TIME_INTERVAL(1000 * 1000)) {
+            STORAGE_LOG(WARN, "fail to get create schema version for pg", K(ret), K(pkey));
+          }
+        } else if (OB_FAIL(schema_guard.get_schema_version(tenant_id_for_get_schema, local_schema_version))) {
+          STORAGE_LOG(WARN, "fail to get schema version", K(ret), K(pkey), K(tenant_id_for_get_schema));
+        } else if (pg_create_schema_version > local_schema_version
+                   || !share::schema::ObSchemaService::is_formal_version(local_schema_version)) {
+          STORAGE_LOG(INFO, "new partition group, schema is not flushed", K(pkey),
+                      K(local_schema_version), K(pg_create_schema_version));
+        } else if (! ObMultiClusterUtil::is_cluster_private_table(pkey.get_table_id())) {
           // The replica to be synchronized across clusters must also check switchover_epoch
           if (OB_SUCCESS != (tmp_ret = pls->is_log_sync_with_primary(switchover_epoch, is_sync))) {
             STORAGE_LOG(WARN, "is_log_sync_with_primary failed", K(tmp_ret), K(pkey));
@@ -11684,39 +11728,40 @@ int ObPartitionService::check_all_partition_sync_state(const int64_t switchover_
           // The replica that does not need to be synchronized across clusters
           is_sync = true;
         }
-        if (!is_sync) {
-          STORAGE_LOG(INFO, "this partition is not sync with leader, need check schema", K(pkey));
-        }
 
-        bool is_dropped = false;
-        bool check_dropped_partition = true;
-        if (!is_sync) {
-          // check whether the partition has been dropped during unsync
-          ObPartitionArray pkeys;
-          if (OB_SUCCESS != (tmp_ret = partition->get_all_pg_partition_keys(pkeys))) {
-            STORAGE_LOG(WARN, "get all pg partition keys error", K(tmp_ret), K(pkey));
-          } else if (!partition->is_pg()) {
-            // dealing with stand alone partition
-            if (OB_SUCCESS !=
-                (tmp_ret = schema_guard.check_partition_can_remove(
-                     pkey.get_table_id(), pkey.get_partition_id(), check_dropped_partition, is_dropped))) {
-              STORAGE_LOG(WARN, "fail to check partition exist", K(tmp_ret), K(pkey));
-            }
-          } else {
-            // The deletion of PG will only be judged after all the partitions in PG are completed by gc
-            if (OB_SUCCESS !=
-                (tmp_ret = schema_guard.check_partition_can_remove(
-                     pkey.get_tablegroup_id(), pkey.get_partition_group_id(), check_dropped_partition, is_dropped))) {
-              STORAGE_LOG(WARN, "fail to check partition group exist", K(tmp_ret), K(pkey));
+        if (OB_SUCC(ret)) {
+          if (!is_sync) {
+            STORAGE_LOG(INFO, "this partition is not sync with leader, need check schema", K(pkey), K(ret));
+          }
+
+          bool is_dropped = false;
+          bool check_dropped_partition = true;
+          if (!is_sync) {
+            // check whether the partition has been dropped during unsync
+            ObPartitionArray pkeys;
+            if (OB_SUCCESS != (tmp_ret = partition->get_all_pg_partition_keys(pkeys))) {
+              STORAGE_LOG(WARN, "get all pg partition keys error", K(tmp_ret), K(pkey));
+            } else if (!partition->is_pg()) {
+              // dealing with stand alone partition
+              if (OB_SUCCESS != (tmp_ret = schema_guard.check_partition_can_remove(
+                      pkey.get_table_id(), pkey.get_partition_id(), check_dropped_partition, is_dropped))) {
+                STORAGE_LOG(WARN, "fail to check partition exist", K(tmp_ret), K(pkey));
+              }
+            } else {
+              // The deletion of PG will only be judged after all the partitions in PG are completed by gc
+              if (OB_SUCCESS != (tmp_ret = schema_guard.check_partition_can_remove(
+                      pkey.get_tablegroup_id(), pkey.get_partition_group_id(), check_dropped_partition, is_dropped))) {
+                STORAGE_LOG(WARN, "fail to check partition group exist", K(tmp_ret), K(pkey));
+              }
             }
           }
-        }
 
-        if (!is_sync) {
-          if (is_dropped) {
-            STORAGE_LOG(INFO, "this unsync partition has been dropped, ignore", K(pkey));
-          } else {
-            fail_count++;
+          if (!is_sync) {
+            if (is_dropped) {
+              STORAGE_LOG(INFO, "this unsync partition has been dropped, ignore", K(pkey));
+            } else {
+              fail_count++;
+            }
           }
         }
       }
@@ -12842,7 +12887,7 @@ int ObPartitionService::wait_schema_version(const int64_t tenant_id, int64_t sch
     LOG_WARN("invalid argument", K(ret), K(tenant_id), K(schema_version), K(query_end_time));
   } else {
     ret = OB_EAGAIN;
-    while (OB_EAGAIN == ret) {
+    while (OB_EAGAIN == ret || OB_TENANT_SCHEMA_NOT_FULL == ret) {
       if (OB_FAIL(schema_service_->get_tenant_full_schema_guard(tenant_id, schema_guard))) {
         LOG_WARN("failed to get_tenant_full_schema_guard", K(ret), K(tenant_id));
       } else if (OB_FAIL(schema_guard.get_schema_version(tenant_id, local_version))) {

@@ -13,6 +13,7 @@
 #define USING_LOG_PREFIX SERVER
 
 #include "election/ob_election_async_log.h"
+#include "lib/alloc/malloc_hook.h"
 #include "lib/alloc/ob_malloc_allocator.h"
 #include "lib/allocator/ob_malloc.h"
 #include "lib/file/file_directory_utils.h"
@@ -157,7 +158,7 @@ static void get_opts_setting(struct option long_opts[], char short_opts[], const
       {"rs_list", 'r', 1},
       {"mode", 'm', 1},
       {"scn", 'f', 1},
-      {"version", 'V', 0},
+      {"version", 'v', 0},
       {"ipv6", '6', 0},
   };
 
@@ -360,6 +361,7 @@ static void print_all_limits()
 
 int main(int argc, char* argv[])
 {
+  init_malloc_hook();
   int64_t memory_used = get_virtual_memory_used();
   /**
     signal handler stack
