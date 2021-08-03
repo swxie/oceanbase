@@ -32,18 +32,25 @@ namespace common {
 class ObServerConfig;
 class ObMySQLProxy;
 
+//用于缓存中间结果的结构
 struct ObStringSelPair {
+
   ObStringSelPair() : string_(""), sel_(0)
   {}
+
   ObStringSelPair(const ObString string, double sel) : string_(string), sel_(sel)
   {}
+
   ~ObStringSelPair()
   {}
+
   bool operator==(const ObStringSelPair& rhs) const
   {
     return string_ == rhs.string_;
   }
+
   TO_STRING_KV(K(string_), K(sel_));
+
   ObString string_;
   double sel_;  // selectiviy of expr
 
@@ -55,10 +62,38 @@ struct ObStringSelPair {
   }
 };
 
+//动态采样服务
 class ObOptSampleService {
-  public:
+
+  friend class ObOptSampleServicePointer;
+
+public:
   ObOptSampleService(sql::ObExecContext* exec_ctx);
+
   ~ObOptSampleService();
+
+  int init();
+
+  // use dynamic sample to get selectivity of exprs on base table
+  // @param est_sel_info[in]
+  // @param quals[in]
+  // @param selectivity[out]
+  int get_single_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals, double& selectivity);
+  
+  //添加了连接参数
+  int get_join_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals, double& selectivity, ObJoinType join_type, const ObRelIds* left_rel_ids,
+    const ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count);
+
+private:
+  bool inited_;
+  int64_t tenant_id_;
+  sql::ObExecContext* exec_ctx_;
+  common::ObMySQLProxy* mysql_proxy_;
+
+  ObSEArray<ObStringSelPair, 8> cache_;
+
+  //引用计数相关，用于管理内存
+  int ref_;
 
   int get_ref()
   {
@@ -77,54 +112,49 @@ class ObOptSampleService {
     return ref_;
   }
 
-  int init();
+  //内部接口-去参数化
 
-  // use dynamic sample to get selectivity of an expr
-  // @param est_sel_info[in]
-  // @param qual[in]
-  // @param selectivity[out]
-  int get_expr_selectivity(const sql::ObEstSelInfo& est_sel_info, const sql::ObRawExpr* qual, double& selectivity);
+  int print_where_clause(const ObIArray<sql::ObRawExpr*>& input_quals, const sql::ParamStore* params, sql::ObRawExprFactory& expr_factory, ObSqlString &output);
 
-  private:
-  bool inited_;
-  int64_t tenant_id_;
-  sql::ObExecContext* exec_ctx_;
-  common::ObMySQLProxy* mysql_proxy_;
+  int calc_const_expr(sql::ObRawExpr* &expr, const sql::ParamStore* params, sql::ObRawExprFactory& expr_factory);
+
+  //内部接口-拼sql
   
-  ObSEArray<ObStringSelPair, 8> cache;
-  int ref_;
+  int generate_single_table_innersql(const sql::TableItem* cur_table_item, const ObSqlString &where_clause, double percent,
+      int seed, ObSqlString& sql);
 
-  //大接口
-  int calc_const_expr(sql::ObRawExpr*& expr, const sql::ParamStore* params, sql::ObRawExprFactory& expr_factory);
-  int fetch_expr_stat(ObSEArray<sql::TableItem*, 3>& cur_table_items, int index, char* where_buffer, double percent,
-      int seed, double& selectivity);  //获得谓词行数的接口
-  //内部接口
-  int generate_innersql(ObSEArray<sql::TableItem*, 3>& cur_table_items, int index, char* where_buffer, double percent,
-      int seed, ObSqlString& sql);  //拼sql的接口
-  int fetch_dynamic_stat(ObSqlString& sql, double& selectivity);
+  int generate_join_table_innersql(const ObSEArray<sql::TableItem*, 3>& cur_table_items, int index, const ObSqlString &where_buffer, double percent,
+      int seed, ObSqlString& sql);
+  
+  //内部接口-取数
+
+  int fetch_dynamic_stat_int(ObSqlString& sql, int &count);
+  
+  int fetch_dynamic_stat_double(ObSqlString& sql, double& selectivity);
+
   int cast_number_to_double(const number::ObNumber& src_val, double& dst_val);
 
 };  // end of class ObOptSampleService
 
-//sample_service的代理，用于在多个改写的optctx间共享缓存
-class ObOptSampleServiceAgent {
-  public:
-  ObOptSampleServiceAgent(sql::ObExecContext* exec_ctx)
+// sample_service的智能指针，用于在多个改写的optctx间共享缓存，并管理动态内存
+class ObOptSampleServicePointer {
+public:
+  ObOptSampleServicePointer(sql::ObExecContext* exec_ctx)
   {
-    service_ = new ObOptSampleService(exec_ctx);
+    service_ = (exec_ctx == NULL ? NULL : new ObOptSampleService(exec_ctx));
   }
 
-  ObOptSampleServiceAgent() : service_(NULL)
+  ObOptSampleServicePointer() : service_(NULL)
   {}
 
-  ObOptSampleServiceAgent(const ObOptSampleServiceAgent& other)
+  ObOptSampleServicePointer(const ObOptSampleServicePointer& other)
   {
     service_ = other.get_service();
     if (service_ != NULL)
       service_->add_ref();
   }
 
-  ObOptSampleServiceAgent& operator=(const ObOptSampleServiceAgent& other)
+  ObOptSampleServicePointer& operator=(const ObOptSampleServicePointer& other)
   {
     if (other.get_service() == service_) {
       // do nothing
@@ -138,7 +168,7 @@ class ObOptSampleServiceAgent {
     return *this;
   }
 
-  ~ObOptSampleServiceAgent()
+  ~ObOptSampleServicePointer()
   {
     if (service_ != NULL && service_->sub_ref() == 0) {
       delete service_;
@@ -150,9 +180,9 @@ class ObOptSampleServiceAgent {
     return service_;
   }
 
-  private:
+private:
   ObOptSampleService* service_;
-};  // end of class ObOptSampleServiceAgent
+};  // end of class ObOptSampleServicePointer
 
 }  // end of namespace common
 }  // end of namespace oceanbase
