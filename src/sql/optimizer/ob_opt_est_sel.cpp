@@ -150,7 +150,7 @@ int ObOptEstSel::calculate_selectivity(const ObEstSelInfo& est_sel_info, const O
     }
   }
   //动态采样
-  if (OB_SUCC(ret) && join_type == UNKNOWN_JOIN){
+  if (OB_SUCC(ret) && join_type == UNKNOWN_JOIN) {
     calculate_selectivity_by_dynamic_sample(est_sel_info, quals, selectivity);
   }
   return ret;
@@ -3609,24 +3609,36 @@ int ObOptEstSel::is_valid_multi_join(ObIArray<ObRawExpr*>& quals, bool& is_valid
   return ret;
 }
 
-int ObOptEstSel::calculate_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity){
+int ObOptEstSel::calculate_selectivity_by_dynamic_sample(
+    const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity)
+{
   int ret = OB_SUCCESS;
   const ObSQLSessionInfo* session = NULL;
   ObOptSampleService* service = NULL;
-  if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))){
+  if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))) {
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
-  } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))){
+  } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))) {
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
-  } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()){
-    //do nothing
-  } else if (OB_FAIL(service->get_single_table_selectivity(est_sel_info, quals, selectivity))){
-    LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
-    ret = OB_SUCCESS;//重置
+  } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()) {
+    // do nothing
+  } else {
+    //简单的检查，检查是否有动态参数、聚合、子查询等情况
+    bool can_dynamic_sample = true;
+    for (int i = 0; i < quals.count(); i++) {
+      if (quals.at(i)->has_flag(CNT_EXEC_PARAM) || quals.at(i)->has_flag(CNT_AGG) ||
+          quals.at(i)->has_flag(CNT_SUB_QUERY)) {
+        can_dynamic_sample = false;
+        break;
+      }
+    }
+    if (can_dynamic_sample && OB_FAIL(service->get_single_table_selectivity(est_sel_info, quals, selectivity))) {
+      LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
+      ret = OB_SUCCESS;  //重置
+    }
   }
   return ret;
-
 }
 
 }  // end of namespace sql

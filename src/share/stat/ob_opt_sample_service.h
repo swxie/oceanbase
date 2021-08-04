@@ -35,11 +35,15 @@ class ObMySQLProxy;
 //用于缓存中间结果的结构
 struct ObStringSelPair {
 
-  ObStringSelPair() : string_(""), sel_(0)
+  ObStringSelPair() : string_(""), sel_(0), allocator_(ObModIds::OB_SQL_STRING)
   {}
 
-  ObStringSelPair(const ObString string, double sel) : string_(string), sel_(sel)
-  {}
+  ObStringSelPair(const ObString string, double sel) : sel_(sel), allocator_(ObModIds::OB_SQL_STRING)
+  {
+    int ret = OB_SUCCESS;
+    if (OB_FAIL(ob_write_string(allocator_, string, string_)))
+      LIB_LOG(ERROR, "failed to write cache string", K(ret));
+  }
 
   ~ObStringSelPair()
   {}
@@ -56,10 +60,15 @@ struct ObStringSelPair {
 
   ObStringSelPair& operator=(const ObStringSelPair& other)
   {
+    int ret = OB_SUCCESS;
     sel_ = other.sel_;
-    string_.assign_ptr(other.string_.ptr(), other.string_.length());
+    if (OB_FAIL(ob_write_string(allocator_, other.string_, string_)))
+      LIB_LOG(ERROR, "failed to write cache string", K(ret));
     return *this;
   }
+
+  private:
+  ObMalloc allocator_;
 };
 
 //动态采样服务
