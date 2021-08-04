@@ -33,7 +33,7 @@ ObOptSampleService::~ObOptSampleService()
 {
   int sample_time = cache_.count();
   if (sample_time > 0)
-    LOG_INFO("Finish dynamic sample service"， K(sample_time));
+    LOG_INFO("Finish dynamic sample service", K(sample_time));
 }
 
 int ObOptSampleService::init()
