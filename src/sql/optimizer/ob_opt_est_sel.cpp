@@ -150,9 +150,25 @@ int ObOptEstSel::calculate_selectivity(const ObEstSelInfo& est_sel_info, const O
     }
   }
   //动态采样
-  if (OB_SUCC(ret) && join_type == UNKNOWN_JOIN) {
-    calculate_selectivity_by_dynamic_sample(est_sel_info, quals, selectivity);
+  if (OB_SUCC(ret)) {
+    const ObSQLSessionInfo* session = NULL;
+    ObOptSampleService* service = NULL;
+    if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))) {
+      ret = OB_ERR_NULL_VALUE;
+      LOG_WARN("get unexpected null", K(ret));
+    } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))) {
+      ret = OB_ERR_NULL_VALUE;
+      LOG_WARN("get unexpected null", K(ret));
+    } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()) {
+      // do nothing
+    } else if (join_type == UNKNOWN_JOIN) {
+      calculate_single_table_selectivity_by_dynamic_sample(est_sel_info, quals, selectivity);
+    } else if (join_type == INNER_JOIN && left_rel_ids.num_members() == 1 && right_rel_ids.num_members() == 1) {
+      calculate_join_table_selectivity_by_dynamic_sample(
+          est_sel_info, quals, selectivity, join_type, left_rel_ids, right_rel_ids, left_row_count, right_row_count);
+    }
   }
+
   return ret;
 }
 
@@ -3609,35 +3625,32 @@ int ObOptEstSel::is_valid_multi_join(ObIArray<ObRawExpr*>& quals, bool& is_valid
   return ret;
 }
 
-int ObOptEstSel::calculate_selectivity_by_dynamic_sample(
+int ObOptEstSel::calculate_single_table_selectivity_by_dynamic_sample(
     const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity)
 {
   int ret = OB_SUCCESS;
-  const ObSQLSessionInfo* session = NULL;
-  ObOptSampleService* service = NULL;
-  if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))) {
-    ret = OB_ERR_NULL_VALUE;
-    LOG_WARN("get unexpected null", K(ret));
-  } else if (OB_UNLIKELY(OB_ISNULL(service = est_sel_info.get_opt_ctx().get_sample_service()))) {
-    ret = OB_ERR_NULL_VALUE;
-    LOG_WARN("get unexpected null", K(ret));
-  } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()) {
-    // do nothing
-  } else {
-    //简单的检查，检查是否有动态参数、聚合、子查询等情况
-    bool can_dynamic_sample = true;
-    for (int i = 0; i < quals.count(); i++) {
-      if (quals.at(i)->has_flag(CNT_EXEC_PARAM) || quals.at(i)->has_flag(CNT_AGG) ||
-          quals.at(i)->has_flag(CNT_SUB_QUERY)) {
-        can_dynamic_sample = false;
-        break;
-      }
-    }
-    if (can_dynamic_sample && OB_FAIL(service->get_single_table_selectivity(est_sel_info, quals, selectivity))) {
-      LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
-      ret = OB_SUCCESS;  //重置
+  //简单的检查，检查是否有动态参数、聚合、子查询等情况
+  bool can_dynamic_sample = true;
+  for (int i = 0; i < quals.count(); i++) {
+    if (quals.at(i)->has_flag(CNT_EXEC_PARAM) || quals.at(i)->has_flag(CNT_AGG) ||
+        quals.at(i)->has_flag(CNT_SUB_QUERY)) {
+      can_dynamic_sample = false;
+      break;
     }
   }
+  if (can_dynamic_sample && OB_FAIL(service->get_single_table_selectivity(est_sel_info, quals, selectivity))) {
+    LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
+    ret = OB_SUCCESS;  //重置
+  }
+  return ret;
+}
+
+int ObOptEstSel::calculate_join_table_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info,
+    const ObIArray<ObRawExpr*>& quals, double& selectivity, ObJoinType join_type, const ObRelIds* left_rel_ids,
+    const ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count)
+{
+  int ret = OB_SUCCESS;
+
   return ret;
 }
 

@@ -826,6 +826,10 @@ class ObLogPlan {
     return startup_filters_;
   }
 
+  int add_relids_selectivity_to_cache(const ObRelIds& table_set, const double& selectivity);
+  int get_relids_selectivity_from_cache(
+      const ObRelIds& left_table_set, const ObRelIds& right_table_set, double& selectivity) const;
+
   protected:
   int update_plans_interesting_order_info(ObIArray<CandidatePlan>& candidate_plans, const int64_t check_scope);
 
@@ -1094,10 +1098,6 @@ class ObLogPlan {
       common::ObIArray<OrderItem>& order_items, common::ObIArray<ObOrderDirection>& directions);
   int try_split_or_qual(ObIArray<ObJoinOrder*>& baserels, ObOpRawExpr& or_qual);
   int calc_and_set_exec_pwj_map(ObLocationConstraintContext& location_constraint) const;
-
-  int add_relids_selectivity_to_cache(const ObRelIds& table_set, const double& selectivity);
-  int get_relids_selectivity_from_cache(
-      const ObRelIds& left_table_set, const ObRelIds& right_table_set, double& selectivity) const;
 
   int64_t check_pwj_cons(const ObPwjConstraint& pwj_cons,
       const common::ObIArray<LocationConstraint>& base_location_cons, ObIArray<PwjTable>& pwj_tables,

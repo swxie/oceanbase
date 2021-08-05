@@ -692,7 +692,12 @@ class ObOptEstSel {
     return fabs(num) < OB_DOUBLE_EPSINON;
   }
 
-  static int calculate_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity);
+  static int calculate_single_table_selectivity_by_dynamic_sample(
+      const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity);
+
+  static int calculate_join_table_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info,
+      const ObIArray<ObRawExpr*>& quals, double& selectivity, ObJoinType join_type, const ObRelIds* left_rel_ids,
+      const ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count);
 
   private:
   DISALLOW_COPY_AND_ASSIGN(ObOptEstSel);
