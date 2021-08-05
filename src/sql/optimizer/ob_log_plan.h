@@ -161,6 +161,23 @@ struct SubPlanInfo {
   TO_STRING_KV(K_(init_expr), K_(sp_params), K_(subplan), K_(init_plan));
 };
 
+//用于缓存中间结果的结构
+struct ObRelIdsSelPair {
+  ObRelIdsSelPair() : table_ids_(), sel_(0)
+  {}
+  ObRelIdsSelPair(const ObRelIds& table_ids, const double& sel) : table_ids_(table_ids), sel_(sel)
+  {}
+  ~ObRelIdsSelPair()
+  {}
+  bool operator==(const ObRelIdsSelPair& rhs) const
+  {
+    return table_ids_ == rhs.table_ids_;
+  }
+  TO_STRING_KV(K(table_ids_), K(sel_));
+  ObRelIds table_ids_;
+  double sel_;  // selectiviy of expr
+};
+
 typedef common::ObSEArray<ObJoinOrder*, 4> JoinOrderArray;
 
 /**
@@ -1078,6 +1095,10 @@ class ObLogPlan {
   int try_split_or_qual(ObIArray<ObJoinOrder*>& baserels, ObOpRawExpr& or_qual);
   int calc_and_set_exec_pwj_map(ObLocationConstraintContext& location_constraint) const;
 
+  int add_relids_selectivity_to_cache(const ObRelIds& table_set, const double& selectivity);
+  int get_relids_selectivity_from_cache(
+      const ObRelIds& left_table_set, const ObRelIds& right_table_set, double& selectivity) const;
+
   int64_t check_pwj_cons(const ObPwjConstraint& pwj_cons,
       const common::ObIArray<LocationConstraint>& base_location_cons, ObIArray<PwjTable>& pwj_tables,
       ObPwjComparer& pwj_comparer, PWJPartitionIdMap& pwj_map) const;
@@ -1096,6 +1117,8 @@ class ObLogPlan {
   common::ObSEArray<std::pair<ObRawExpr*, ObRawExpr*>, 4, common::ModulePageAllocator, true> group_replaced_exprs_;
 
   common::ObSEArray<ObRawExpr*, 4, common::ModulePageAllocator, true> pushdown_filters_;
+
+  common::ObSEArray<ObRelIdsSelPair, 8, common::ModulePageAllocator, true> join_sel_cache_;
 
   private:  // member variable
   ObQueryRefRawExpr* query_ref_;
