@@ -6201,7 +6201,7 @@ int ObJoinOrder::calc_join_output_rows(
   if (OB_ISNULL(get_plan()) || OB_ISNULL(join_info_)) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("get unexpected null", K(ret));
-  } else if (join_type == INNER_JOIN && left_ids.num_members() + right_ids.num_members() >= 3) {
+  } else if (join_type == INNER_JOIN && left_ids.num_members() + right_ids.num_members() > 2) {
     if (OB_FAIL(plan_->get_relids_selectivity_from_cache(left_ids, right_ids, selectivity))) {
       LOG_WARN("failed to get sel from join sel cache", K(ret));
     } else {
@@ -6216,7 +6216,9 @@ int ObJoinOrder::calc_join_output_rows(
             &left_ids,
             &right_ids,
             left_tree.output_rows_,
-            right_tree.output_rows_))) {
+            right_tree.output_rows_,
+            &(const_cast<ObJoinOrder&>(left_tree).get_restrict_infos()),
+            &(const_cast<ObJoinOrder&>(right_tree).get_restrict_infos())))) {
       LOG_WARN("Failed to calc filter selectivities", K(get_restrict_infos()), K(ret));
     } else {
       new_rows = left_tree.output_rows_ * right_tree.output_rows_ * selectivity;
