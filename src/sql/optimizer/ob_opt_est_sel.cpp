@@ -3676,7 +3676,7 @@ int ObOptEstSel::calculate_join_table_selectivity_by_dynamic_sample(const ObEstS
     ret = OB_ERR_NULL_VALUE;
     LOG_WARN("get unexpected null", K(ret));
   } else {
-    //简单的检查，检查连接谓词中是否有动态参数、聚合、子查询等情况
+    //简单的检查，检查连接谓词和两个基表中是否有动态参数、聚合、子查询等情况
     bool can_dynamic_sample = true;
     for (int i = 0; can_dynamic_sample && i < quals.count(); i++) {
       if (quals.at(i)->has_flag(CNT_EXEC_PARAM) || quals.at(i)->has_flag(CNT_AGG) ||
@@ -3684,10 +3684,29 @@ int ObOptEstSel::calculate_join_table_selectivity_by_dynamic_sample(const ObEstS
         can_dynamic_sample = false;
       }
     }
-    //判断两个基表中是否有动态参数、聚合、子查询
-
+    for (int i = 0; can_dynamic_sample && i < left_quals->count(); i++) {
+      if (left_quals->at(i)->has_flag(CNT_EXEC_PARAM) || left_quals->at(i)->has_flag(CNT_AGG) ||
+          left_quals->at(i)->has_flag(CNT_SUB_QUERY)) {
+        can_dynamic_sample = false;
+      }
+    }
+    for (int i = 0; can_dynamic_sample && i < right_quals->count(); i++) {
+      if (right_quals->at(i)->has_flag(CNT_EXEC_PARAM) || right_quals->at(i)->has_flag(CNT_AGG) ||
+          right_quals->at(i)->has_flag(CNT_SUB_QUERY)) {
+        can_dynamic_sample = false;
+      }
+    }
     //动态采样
-    if (can_dynamic_sample && OB_FAIL(service->get_single_table_selectivity(est_sel_info, quals, selectivity))) {
+    if (can_dynamic_sample && OB_FAIL(service->get_join_table_selectivity(est_sel_info,
+                                  quals,
+                                  selectivity,
+                                  join_type,
+                                  left_rel_ids,
+                                  right_rel_ids,
+                                  left_row_count,
+                                  right_row_count,
+                                  *left_quals,
+                                  *right_quals))) {
       LOG_WARN("Failed to get selectivity by dynamic sample", K(ret));
       ret = OB_SUCCESS;  //重置
     }

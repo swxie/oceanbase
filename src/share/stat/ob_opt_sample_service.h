@@ -93,7 +93,7 @@ class ObOptSampleService {
   //添加了连接参数
   int get_join_table_selectivity(const sql::ObEstSelInfo& est_sel_info, const ObIArray<sql::ObRawExpr*>& quals,
       double& selectivity, sql::ObJoinType join_type, const sql::ObRelIds* left_rel_ids,
-      const sql::ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count,
+      const sql::ObRelIds* right_rel_ids, double left_row_count, double right_row_count,
       const common::ObIArray<sql::ObRawExpr*>& left_quals, const common::ObIArray<sql::ObRawExpr*>& right_quals);
 
   private:
@@ -141,9 +141,9 @@ class ObOptSampleService {
 
   //内部接口-取数
 
-  int fetch_dynamic_stat_int(ObSqlString& sql, int& count);
+  int fetch_dynamic_stat(ObSqlString& sql, double& selectivity);
 
-  int fetch_dynamic_stat_double(ObSqlString& sql, double& selectivity);
+  int fetch_dynamic_stat(ObSqlString& sql, double& selectivity, double left_row_count, double right_row_count);
 
   int cast_number_to_double(const number::ObNumber& src_val, double& dst_val);
 
