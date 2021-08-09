@@ -255,10 +255,10 @@ int ObOptSampleService::generate_single_table_innersql(
 int ObOptSampleService::fetch_dynamic_stat(ObSqlString& sql, double& selectivity)
 {
   int ret = OB_SUCCESS;
-  int64_t* index_ptr = NULL;
+  int64_t index = 0;
   ObStringSelPair target_pair(sql.string(), 0.0);
-  if (has_exist_in_array(cache_, target_pair, index_ptr)) {
-    selectivity = cache_.at(*index_ptr).sel_;
+  if (has_exist_in_array(cache_, target_pair, &index)) {
+    selectivity = cache_.at(index).sel_;
   } else {
     DEFINE_SQL_CLIENT_RETRY_WEAK_FOR_STAT(mysql_proxy_);
     SMART_VAR(ObMySQLProxy::MySQLResult, res)
@@ -406,11 +406,11 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
           double result_1 = 0, result_2 = 0;
           ObSqlString query;
           if (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, 1, query)) ||
-              OB_FAIL(fetch_dynamic_stat(query, result_1, left_row_count, right_row_count))) {
+              OB_FAIL(fetch_dynamic_stat(query, result_1, left_row_count * percent / 100.0, right_row_count))) {
             LOG_WARN("fail to sample first time", K(ret));
           } else if (percent < 100 &&
                      (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, 2, query)) ||
-                         OB_FAIL(fetch_dynamic_stat(query, result_2, left_row_count, right_row_count)))) {
+                         OB_FAIL(fetch_dynamic_stat(query, result_2, left_row_count * percent / 100.0, right_row_count)))) {
             LOG_WARN("fail to sample second time", K(ret));
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
@@ -419,7 +419,7 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
               percent *= 2;
               seed++;
               if (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, seed, query)) ||
-                  OB_FAIL(fetch_dynamic_stat(query, selectivity, left_row_count, right_row_count))) {
+                  OB_FAIL(fetch_dynamic_stat(query, selectivity, left_row_count * percent / 100.0, right_row_count))) {
                 LOG_WARN("failed to sample", K(ret));
               }
             }
@@ -476,10 +476,10 @@ int ObOptSampleService::fetch_dynamic_stat(
     ObSqlString& sql, double& selectivity, double left_row_count, double right_row_count)
 {
   int ret = OB_SUCCESS;
-  int64_t* index_ptr = NULL;
+  int64_t index = 0;
   ObStringSelPair target_pair(sql.string(), 0.0);
-  if (has_exist_in_array(cache_, target_pair, index_ptr)) {
-    selectivity = cache_.at(*index_ptr).sel_;
+  if (has_exist_in_array(cache_, target_pair, &index)) {
+    selectivity = cache_.at(index).sel_;
   } else {
     DEFINE_SQL_CLIENT_RETRY_WEAK_FOR_STAT(mysql_proxy_);
     SMART_VAR(ObMySQLProxy::MySQLResult, res)

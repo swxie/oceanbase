@@ -151,7 +151,7 @@ int ObOptEstSel::calculate_selectivity(const ObEstSelInfo& est_sel_info, const O
     }
   }
   //动态采样
-  if (OB_SUCC(ret)) {
+  if (OB_SUCC(ret) && quals.count() > 0) {
     const ObSQLSessionInfo* session = NULL;
     if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))) {
       ret = OB_ERR_NULL_VALUE;
