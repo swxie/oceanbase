@@ -406,7 +406,8 @@ public:
   static int calculate_selectivity(const ObEstSelInfo& est_sel_info, const common::ObIArray<ObRawExpr*>& quals,
       double& selectivity, common::ObIArray<ObExprSelPair>* all_predicate_sel, ObJoinType join_type = UNKNOWN_JOIN,
       const ObRelIds* left_rel_ids = NULL, const ObRelIds* right_rel_ids = NULL, const double left_row_count = -1.0,
-      const double right_row_count = -1.0);
+      const double right_row_count = -1.0, const common::ObIArray<ObRawExpr*>* left_quals = NULL,
+      const common::ObIArray<ObRawExpr*>* right_quals = NULL);
 
   // calculate selectivity for one predicate
   static int clause_selectivity(const ObEstSelInfo& est_sel_info, const ObRawExpr* qual, double& selectivity,
@@ -692,7 +693,15 @@ private:
     return fabs(num) < OB_DOUBLE_EPSINON;
   }
 
-private:
+  static int calculate_single_table_selectivity_by_dynamic_sample(
+      const ObEstSelInfo& est_sel_info, const ObIArray<ObRawExpr*>& quals, double& selectivity);
+
+  static int calculate_join_table_selectivity_by_dynamic_sample(const ObEstSelInfo& est_sel_info,
+      const ObIArray<ObRawExpr*>& quals, double& selectivity, ObJoinType join_type, const ObRelIds* left_rel_ids,
+      const ObRelIds* right_rel_ids, const double left_row_count, const double right_row_count,
+      const common::ObIArray<ObRawExpr*>* left_quals, const common::ObIArray<ObRawExpr*>* right_quals);
+
+  private:
   DISALLOW_COPY_AND_ASSIGN(ObOptEstSel);
 };
 }  // namespace sql

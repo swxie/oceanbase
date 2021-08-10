@@ -6194,6 +6194,12 @@ int ObJoinOrder::calc_join_output_rows(
   if (OB_ISNULL(get_plan()) || OB_ISNULL(join_info_)) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("get unexpected null", K(ret));
+  } else if (join_type == INNER_JOIN && left_ids.num_members() + right_ids.num_members() > 2) {
+    if (OB_FAIL(plan_->get_relids_selectivity_from_cache(left_ids, right_ids, selectivity))) {
+      LOG_WARN("failed to get sel from join sel cache", K(ret));
+    } else {
+      new_rows = selectivity * left_tree.output_rows_ * right_tree.output_rows_;
+    }
   } else if (INNER_JOIN == join_type) {
     if (OB_FAIL(ObOptEstSel::calculate_selectivity(get_plan()->get_est_sel_info(),
             join_info_->where_condition_,
@@ -6203,7 +6209,9 @@ int ObJoinOrder::calc_join_output_rows(
             &left_ids,
             &right_ids,
             left_tree.output_rows_,
-            right_tree.output_rows_))) {
+            right_tree.output_rows_,
+            &(const_cast<ObJoinOrder&>(left_tree).get_restrict_infos()),
+            &(const_cast<ObJoinOrder&>(right_tree).get_restrict_infos())))) {
       LOG_WARN("Failed to calc filter selectivities", K(get_restrict_infos()), K(ret));
     } else {
       new_rows = left_tree.output_rows_ * right_tree.output_rows_ * selectivity;
@@ -6338,6 +6346,15 @@ int ObJoinOrder::calc_join_output_rows(
       selectivity = connect_by_selectivity;
     }
   }
+  if (join_type == INNER_JOIN && left_ids.num_members() == 1 && right_ids.num_members() == 1) {
+    ObRelIds temp_ids = left_ids;
+    double temp_selectivity = new_rows / (left_tree.output_rows_ * right_tree.output_rows_);
+    if (OB_FAIL(temp_ids.add_members(right_ids))) {
+      LOG_WARN("failed to add sel into join sel cache", K(ret));
+    } else if (plan_->add_relids_selectivity_to_cache(temp_ids, selectivity)) {
+      LOG_WARN("failed to add sel into join sel cache", K(ret));
+    }
+  } 
   LOG_TRACE("estimate join size and width",
       K(left_tree.output_rows_),
       K(right_tree.output_rows_),

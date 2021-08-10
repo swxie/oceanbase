@@ -217,7 +217,8 @@ int ObOutlineExecutor::generate_logical_plan(
                  opt_ctx.get_merged_version(),
                  phy_plan,
                  ctx,
-                 outline_stmt))) {
+                 outline_stmt, 
+                 opt_ctx.get_sample_service_pointer()))) {
     LOG_WARN("fail to transform outline stmt", K(ret));
   } else if (FALSE_IT(opt_ctx.set_root_stmt(outline_stmt))) {
     // do nothing

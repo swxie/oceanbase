@@ -273,6 +273,7 @@ ob_set_subtarget(ob_share stat
   stat/ob_opt_table_stat.cpp
   stat/ob_opt_table_stat_cache.cpp
   stat/ob_stat_manager.cpp
+  stat/ob_opt_sample_service.cpp
   stat/ob_table_stat_cache.cpp
   stat/ob_user_tab_col_statistics.cpp
 )

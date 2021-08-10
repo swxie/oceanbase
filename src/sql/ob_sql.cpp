@@ -1590,7 +1590,8 @@ int ObSql::generate_physical_plan(ParseResult& parse_result, ObPlanCacheCtx* pc_
                        sql_ctx.merged_version_,
                        phy_plan,
                        result.get_exec_context(),
-                       stmt))) {  // rewrite stmt
+                       stmt,
+                       optctx.get_sample_service_pointer()))) {  // rewrite stmt
           LOG_WARN("Failed to transforme stmt", K(ret));
         } else if (OB_FALSE_IT(optctx.set_root_stmt(stmt))) {
         } else if (OB_FAIL(optimize_stmt(optimizer, *(sql_ctx.session_info_),
@@ -1749,7 +1750,7 @@ int ObSql::calc_pre_calculable_exprs(
 int ObSql::transform_stmt(ObSqlSchemaGuard* sql_schema_guard,
     share::ObIPartitionLocationCache* partition_location_cache, storage::ObPartitionService* partition_service,
     common::ObStatManager* stat_mgr, common::ObOptStatManager* opt_stat_mgr, common::ObAddr* self_addr,
-    int64_t merged_version, ObPhysicalPlan* phy_plan, ObExecContext& exec_ctx, ObDMLStmt*& stmt)
+    int64_t merged_version, ObPhysicalPlan* phy_plan, ObExecContext& exec_ctx, ObDMLStmt*& stmt, ObOptSampleServicePointer sample_service_pointer)
 {
   int ret = OB_SUCCESS;
   ObDMLStmt* transform_stmt = stmt;
@@ -1782,6 +1783,7 @@ int ObSql::transform_stmt(ObSqlSchemaGuard* sql_schema_guard,
 
   ObTransformerCtx trans_ctx;
   ObSchemaChecker schema_checker;
+  trans_ctx.sample_service_pointer_ = sample_service_pointer;
 
   if (OB_FAIL(ret)) {
   } else if (OB_FAIL(replace_stmt_bool_filter(exec_ctx, transform_stmt))) {

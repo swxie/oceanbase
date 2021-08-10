@@ -161,6 +161,23 @@ struct SubPlanInfo {
   TO_STRING_KV(K_(init_expr), K_(sp_params), K_(subplan), K_(init_plan));
 };
 
+//用于缓存中间结果的结构
+struct ObRelIdsSelPair {
+  ObRelIdsSelPair() : table_ids_(), sel_(0)
+  {}
+  ObRelIdsSelPair(const ObRelIds& table_ids, const double& sel) : table_ids_(table_ids), sel_(sel)
+  {}
+  ~ObRelIdsSelPair()
+  {}
+  bool operator==(const ObRelIdsSelPair& rhs) const
+  {
+    return table_ids_ == rhs.table_ids_;
+  }
+  TO_STRING_KV(K(table_ids_), K(sel_));
+  ObRelIds table_ids_;
+  double sel_;  // selectiviy of expr
+};
+
 typedef common::ObSEArray<ObJoinOrder*, 4> JoinOrderArray;
 
 /**
@@ -809,7 +826,11 @@ public:
     return startup_filters_;
   }
 
-protected:
+  int add_relids_selectivity_to_cache(const ObRelIds& table_set, const double& selectivity);
+  int get_relids_selectivity_from_cache(
+      const ObRelIds& left_table_set, const ObRelIds& right_table_set, double& selectivity) const;
+
+  protected:
   int update_plans_interesting_order_info(ObIArray<CandidatePlan>& candidate_plans, const int64_t check_scope);
 
   int prune_and_keep_best_plans(ObIArray<CandidatePlan>& candidate_plans);
@@ -1097,7 +1118,9 @@ protected:  // member variable
 
   common::ObSEArray<ObRawExpr*, 4, common::ModulePageAllocator, true> pushdown_filters_;
 
-private:  // member variable
+  common::ObSEArray<ObRelIdsSelPair, 8, common::ModulePageAllocator, true> join_sel_cache_;
+
+  private:  // member variable
   ObQueryRefRawExpr* query_ref_;
   ObLogicalOperator* root_;    // root operator
   common::ObString sql_text_;  // SQL string

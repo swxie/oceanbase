@@ -7515,3 +7515,40 @@ int64_t ObLogPlan::check_pwj_cons(const ObPwjConstraint& pwj_cons,
   }
   return ret;
 }
+
+int ObLogPlan::add_relids_selectivity_to_cache(const ObRelIds& table_set, const double& selectivity)
+{
+  int ret = OB_SUCCESS;
+  ObRelIdsSelPair target_node(table_set, selectivity);
+  if (table_set.num_members() != 2){
+    ret = OB_INVALID_ARGUMENT;
+    LOG_WARN("argument wrong", K(ret));
+  } else if (OB_FAIL(add_var_to_array_no_dup(join_sel_cache_, target_node))){
+    LOG_WARN("failed to add table set's selectivity into cache");
+  }
+  return ret;
+}
+
+int ObLogPlan::get_relids_selectivity_from_cache(
+    const ObRelIds& left_table_set, const ObRelIds& right_table_set, double& selectivity) const
+{
+  int ret = OB_SUCCESS;
+  selectivity = 1.0;
+  if (left_table_set.num_members() + right_table_set.num_members() < 3){
+    ret = OB_INVALID_ARGUMENT;
+    LOG_WARN("argument wrong", K(ret));
+  } else if (left_table_set.overlap(right_table_set)){
+    ret = OB_INVALID_ARGUMENT;
+    LOG_WARN("argument wrong", K(ret));
+  } else {
+    for (int i = 0; i < join_sel_cache_.count(); i++){
+      ObRelIds temp_table_set = join_sel_cache_.at(i).table_ids_;
+      double temp_sel = join_sel_cache_.at(i).sel_;
+      if (temp_table_set.is_subset(left_table_set) || temp_table_set.is_subset(right_table_set))
+        continue;
+      else if (temp_table_set.overlap(left_table_set) && temp_table_set.overlap(right_table_set))
+        selectivity *= temp_sel;
+    }
+  }
+  return ret;
+}

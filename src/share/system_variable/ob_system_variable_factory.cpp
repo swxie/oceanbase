@@ -147,6 +147,7 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_NAME[] = {"_enable_parallel
     "ob_enable_aggregation_pushdown",
     "ob_enable_batched_multi_statement",
     "ob_enable_blk_nestedloop_join",
+    "ob_enable_dynamic_sample",
     "ob_enable_hash_group_by",
     "ob_enable_index_direct_select",
     "ob_enable_jit",
@@ -342,6 +343,7 @@ const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR
     SYS_VAR_OB_ENABLE_AGGREGATION_PUSHDOWN,
     SYS_VAR_OB_ENABLE_BATCHED_MULTI_STATEMENT,
     SYS_VAR_OB_ENABLE_BLK_NESTEDLOOP_JOIN,
+    SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE,
     SYS_VAR_OB_ENABLE_HASH_GROUP_BY,
     SYS_VAR_OB_ENABLE_INDEX_DIRECT_SELECT,
     SYS_VAR_OB_ENABLE_JIT,
@@ -636,7 +638,8 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_ID[] = {"auto_increment_inc
     "performance_schema",
     "nls_currency",
     "nls_iso_currency",
-    "nls_dual_currency"};
+    "nls_dual_currency",
+    "ob_enable_dynamic_sample"};
 
 bool ObSysVarFactory::sys_var_name_case_cmp(const char* name1, const ObString& name2)
 {
@@ -2958,7 +2961,18 @@ int ObSysVarFactory::create_sys_var(ObSysVarClassType sys_var_id, ObBasicSysVar*
         }
         break;
       }
-
+      case SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE: {
+        void* ptr = NULL;
+        if (OB_ISNULL(ptr = allocator_.alloc(sizeof(ObSysVarObEnableDynamicSample)))) {
+          ret = OB_ALLOCATE_MEMORY_FAILED;
+          LOG_ERROR("fail to alloc memory", K(ret), K(sizeof(ObSysVarObEnableDynamicSample)));
+        } else if (OB_ISNULL(sys_var_ptr = new (ptr) ObSysVarObEnableDynamicSample())) {
+          ret = OB_ALLOCATE_MEMORY_FAILED;
+          LOG_ERROR("fail to new ObSysVarObEnableDynamicSample", K(ret));
+        }
+        break;
+      }
+      
       default: {
         ret = OB_ERR_UNEXPECTED;
         LOG_ERROR("invalid system variable id", K(ret), K(sys_var_id));
