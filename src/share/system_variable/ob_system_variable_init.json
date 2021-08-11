@@ -2583,12 +2583,12 @@
     "background_cn": "兼容 oracle number format model U 数字格式元素",
     "ref_url": "https://yuque.antfin-inc.com/ob/product_functionality_review/efqk1r"
   },
-  "ob_enable_dynamic_sample": {
+  "ob_dynamic_sample_level": {
     "id": 10114,
-    "name": "ob_enable_dynamic_sample",
+    "name": "ob_dynamic_sample_level",
     "value": "0",
-    "data_type": "bool",
-    "info": "control whether use dynamic sample",
+    "data_type": "int",
+    "info": "control dynamic sample level",
     "flags": "Global | SESSION | NEED_SERIALIZE",
     "publish_version": "",
     "info_cn": "",

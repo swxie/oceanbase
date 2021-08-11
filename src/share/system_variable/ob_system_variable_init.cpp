@@ -2277,15 +2277,15 @@ static struct VarsInit {
     ObSysVarsIdToArrayIdx[SYS_VAR_NLS_DUAL_CURRENCY] = 193;
     ObSysVars[193].alias_ = "OB_SV_NLS_DUAL_CURRENCY";
 
-    ObSysVars[194].info_ = "control whether use trace log";
-    ObSysVars[194].name_ = "ob_enable_dynamic_sample";
+    ObSysVars[194].info_ = "control dynamic sample level";
+    ObSysVars[194].name_ = "ob_dynamic_sample_level";
     ObSysVars[194].data_type_ = ObIntType;
     ObSysVars[194].value_ = "0";
     ObSysVars[194].flags_ = ObSysVarFlag::GLOBAL_SCOPE | ObSysVarFlag::SESSION_SCOPE | ObSysVarFlag::NEED_SERIALIZE;
-    ObSysVars[194].id_ = SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE;
-    cur_max_var_id = MAX(cur_max_var_id, static_cast<int64_t>(SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE));
-    ObSysVarsIdToArrayIdx[SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE] = 194;
-    ObSysVars[194].alias_ = "OB_SV_ENABLE_DYNAMIC_SAMPLE";
+    ObSysVars[194].id_ = SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL;
+    cur_max_var_id = MAX(cur_max_var_id, static_cast<int64_t>(SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL));
+    ObSysVarsIdToArrayIdx[SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL] = 194;
+    ObSysVars[194].alias_ = "OB_SV_DYNAMIC_SAMPLE_LEVEL";
     
     if (cur_max_var_id >= ObSysVarFactory::OB_MAX_SYS_VAR_ID) {
       HasInvalidSysVar = true;

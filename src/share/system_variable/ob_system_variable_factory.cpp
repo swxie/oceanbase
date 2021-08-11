@@ -143,11 +143,11 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_NAME[] = {"_enable_parallel
     "ob_compatibility_mode",
     "ob_create_table_strict_mode",
     "ob_default_replica_num",
+    "ob_dynamic_sample_level",
     "ob_early_lock_release",
     "ob_enable_aggregation_pushdown",
     "ob_enable_batched_multi_statement",
     "ob_enable_blk_nestedloop_join",
-    "ob_enable_dynamic_sample",
     "ob_enable_hash_group_by",
     "ob_enable_index_direct_select",
     "ob_enable_jit",
@@ -339,11 +339,11 @@ const ObSysVarClassType ObSysVarFactory::SYS_VAR_IDS_SORTED_BY_NAME[] = {SYS_VAR
     SYS_VAR_OB_COMPATIBILITY_MODE,
     SYS_VAR_OB_CREATE_TABLE_STRICT_MODE,
     SYS_VAR_OB_DEFAULT_REPLICA_NUM,
+    SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL,
     SYS_VAR_OB_EARLY_LOCK_RELEASE,
     SYS_VAR_OB_ENABLE_AGGREGATION_PUSHDOWN,
     SYS_VAR_OB_ENABLE_BATCHED_MULTI_STATEMENT,
     SYS_VAR_OB_ENABLE_BLK_NESTEDLOOP_JOIN,
-    SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE,
     SYS_VAR_OB_ENABLE_HASH_GROUP_BY,
     SYS_VAR_OB_ENABLE_INDEX_DIRECT_SELECT,
     SYS_VAR_OB_ENABLE_JIT,
@@ -639,7 +639,7 @@ const char* ObSysVarFactory::SYS_VAR_NAMES_SORTED_BY_ID[] = {"auto_increment_inc
     "nls_currency",
     "nls_iso_currency",
     "nls_dual_currency",
-    "ob_enable_dynamic_sample"};
+    "ob_dynamic_sample_level"};
 
 bool ObSysVarFactory::sys_var_name_case_cmp(const char* name1, const ObString& name2)
 {
@@ -2961,7 +2961,7 @@ int ObSysVarFactory::create_sys_var(ObSysVarClassType sys_var_id, ObBasicSysVar*
         }
         break;
       }
-      case SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE: {
+      case SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL: {
         void* ptr = NULL;
         if (OB_ISNULL(ptr = allocator_.alloc(sizeof(ObSysVarObEnableDynamicSample)))) {
           ret = OB_ALLOCATE_MEMORY_FAILED;

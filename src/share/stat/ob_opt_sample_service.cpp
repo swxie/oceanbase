@@ -322,6 +322,8 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
   if (!inited_ && OB_FAIL(init())) {
     ret = OB_NOT_INIT;
     LOG_WARN("sql service has not initialized.", K(ret));
+  } else if (join_type != INNER_JOIN || left_rel_ids == NULL || right_rel_ids == NULL) {
+    //do nothing, to avoid Wunused-parameter
   } else {
     //检查innersql
     const ObSQLSessionInfo* session = est_sel_info.get_session_info();

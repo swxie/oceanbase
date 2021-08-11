@@ -462,7 +462,7 @@ public:
   uint64_t get_local_auto_increment_offset() const;
   uint64_t get_local_last_insert_id() const;
   bool get_local_ob_enable_plan_cache() const;
-  bool get_local_ob_enable_dynamic_sample() const;
+  int get_local_ob_dynamic_sample_level() const;
   bool get_local_ob_enable_sql_audit() const;
   ObLengthSemantics get_local_nls_length_semantics() const;
   ObLengthSemantics get_actual_nls_length_semantics() const;
@@ -1028,7 +1028,7 @@ public:
   int if_aggr_pushdown_allowed(bool& aggr_pushdown_allowed) const;
   int is_transformation_enabled(bool& transformation_enabled) const;
   int is_use_trace_log(bool& use_trace_log) const;
-  int is_use_dynamic_sample(bool& use_dynamic_sample) const;
+  int get_ob_dynamic_sample_level(int64_t& use_dynamic_sample) const;
   int is_use_transmission_checksum(bool& use_transmission_checksum) const;
   int is_select_index_enabled(bool& select_index_enabled) const;
   int get_name_case_mode(common::ObNameCaseMode& case_mode) const;
@@ -1727,7 +1727,7 @@ private:
           autocommit_(false),
           ob_enable_trace_log_(false),
           ob_enable_sql_audit_(false),
-          ob_enable_dynamic_sample_(false),
+          ob_dynamic_sample_level_(0),
           nls_length_semantics_(LS_BYTE),
           ob_org_cluster_id_(0),
           ob_query_timeout_(0),
@@ -1771,7 +1771,7 @@ private:
       ob_pl_block_timeout_ = 0;
       autocommit_ = false;
       ob_enable_trace_log_ = false;
-      ob_enable_dynamic_sample_ = false;
+      ob_dynamic_sample_level_ = 0;
       ob_org_cluster_id_ = 0;
       ob_query_timeout_ = 0;
       ob_trx_timeout_ = 0;
@@ -1839,7 +1839,7 @@ private:
     {
       return ob_trace_info_;
     }
-    TO_STRING_KV(K(autocommit_), K(ob_enable_trace_log_), K(ob_enable_sql_audit_), K(ob_enable_dynamic_sample_), K(nls_length_semantics_),
+    TO_STRING_KV(K(autocommit_), K(ob_enable_trace_log_), K(ob_enable_sql_audit_), K(ob_dynamic_sample_level_), K(nls_length_semantics_),
         K(ob_org_cluster_id_), K(ob_query_timeout_), K(ob_trx_timeout_), K(collation_connection_), K(sql_mode_),
         K(nls_formats_[0]), K(nls_formats_[1]), K(nls_formats_[2]), K(ob_trx_idle_timeout_), K(ob_trx_lock_timeout_),
         K(nls_collation_), K(nls_nation_collation_), K_(sql_throttle_current_priority), K_(ob_last_schema_version),
@@ -1876,7 +1876,7 @@ private:
     bool autocommit_;
     bool ob_enable_trace_log_;
     bool ob_enable_sql_audit_;
-    bool ob_enable_dynamic_sample_;
+    int64_t ob_dynamic_sample_level_;
     ObLengthSemantics nls_length_semantics_;
     int64_t ob_org_cluster_id_;
     int64_t ob_query_timeout_;
@@ -1982,7 +1982,7 @@ private:
     DEF_SYS_VAR_CACHE_FUNCS(bool, autocommit);
     DEF_SYS_VAR_CACHE_FUNCS(bool, ob_enable_trace_log);
     DEF_SYS_VAR_CACHE_FUNCS(bool, ob_enable_sql_audit);
-    DEF_SYS_VAR_CACHE_FUNCS(bool, ob_enable_dynamic_sample);
+    DEF_SYS_VAR_CACHE_FUNCS(int64_t, ob_dynamic_sample_level);
     DEF_SYS_VAR_CACHE_FUNCS(ObLengthSemantics, nls_length_semantics);
     DEF_SYS_VAR_CACHE_FUNCS(int64_t, ob_org_cluster_id);
     DEF_SYS_VAR_CACHE_FUNCS(int64_t, ob_query_timeout);
@@ -2042,7 +2042,7 @@ private:
         bool inc_autocommit_ : 1;
         bool inc_ob_enable_trace_log_ : 1;
         bool inc_ob_enable_sql_audit_;
-        bool inc_ob_enable_dynamic_sample_ : 1;
+        bool inc_ob_dynamic_sample_level_ : 1;
         bool inc_nls_length_semantics_ : 1;
         bool inc_ob_org_cluster_id_ : 1;
         bool inc_ob_query_timeout_ : 1;
@@ -2257,11 +2257,6 @@ inline uint64_t ObBasicSessionInfo::get_local_last_insert_id() const
 inline bool ObBasicSessionInfo::get_local_ob_enable_plan_cache() const
 {
   return sys_vars_cache_.get_ob_enable_plan_cache();
-}
-
-inline bool ObBasicSessionInfo::get_local_ob_enable_dynamic_sample() const
-{
-  return sys_vars_cache_.get_ob_enable_dynamic_sample();
 }
 
 inline bool ObBasicSessionInfo::get_local_ob_enable_sql_audit() const

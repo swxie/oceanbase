@@ -156,12 +156,12 @@ int ObOptEstSel::calculate_selectivity(const ObEstSelInfo& est_sel_info, const O
     if (OB_UNLIKELY(OB_ISNULL(session = est_sel_info.get_session_info()))) {
       ret = OB_ERR_NULL_VALUE;
       LOG_WARN("get unexpected null", K(ret));
-    } else if (!(session->get_local_ob_enable_dynamic_sample()) || session->is_inner()) {
+    } else if (session->is_inner()) {
       // do nothing
-    } else if (join_type == UNKNOWN_JOIN) {
+    } else if (join_type == UNKNOWN_JOIN && session->get_local_ob_dynamic_sample_level() >= 1) {
       calculate_single_table_selectivity_by_dynamic_sample(est_sel_info, quals, selectivity);
     } else if (join_type == INNER_JOIN && left_rel_ids->num_members() == 1 && right_rel_ids->num_members() == 1 &&
-               left_quals != NULL && right_quals != NULL) {
+               left_quals != NULL && right_quals != NULL && session->get_local_ob_dynamic_sample_level() >= 2) {
       calculate_join_table_selectivity_by_dynamic_sample(est_sel_info,
           quals,
           selectivity,

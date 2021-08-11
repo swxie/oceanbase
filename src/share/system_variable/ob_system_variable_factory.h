@@ -2640,7 +2640,7 @@ class ObSysVarObEnableDynamicSample : public ObBoolSysVar {
   {}
   inline virtual ObSysVarClassType get_type() const
   {
-    return SYS_VAR_OB_ENABLE_DYNAMIC_SAMPLE;
+    return SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL;
   }
   inline virtual const common::ObObj& get_global_default_value() const
   {
