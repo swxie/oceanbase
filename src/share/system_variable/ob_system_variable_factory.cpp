@@ -2963,12 +2963,12 @@ int ObSysVarFactory::create_sys_var(ObSysVarClassType sys_var_id, ObBasicSysVar*
       }
       case SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL: {
         void* ptr = NULL;
-        if (OB_ISNULL(ptr = allocator_.alloc(sizeof(ObSysVarObEnableDynamicSample)))) {
+        if (OB_ISNULL(ptr = allocator_.alloc(sizeof(ObSysVarObDynamicSampleLevel)))) {
           ret = OB_ALLOCATE_MEMORY_FAILED;
-          LOG_ERROR("fail to alloc memory", K(ret), K(sizeof(ObSysVarObEnableDynamicSample)));
-        } else if (OB_ISNULL(sys_var_ptr = new (ptr) ObSysVarObEnableDynamicSample())) {
+          LOG_ERROR("fail to alloc memory", K(ret), K(sizeof(ObSysVarObDynamicSampleLevel)));
+        } else if (OB_ISNULL(sys_var_ptr = new (ptr) ObSysVarObDynamicSampleLevel())) {
           ret = OB_ALLOCATE_MEMORY_FAILED;
-          LOG_ERROR("fail to new ObSysVarObEnableDynamicSample", K(ret));
+          LOG_ERROR("fail to new ObSysVarObDynamicSampleLevel", K(ret));
         }
         break;
       }

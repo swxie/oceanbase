@@ -2590,6 +2590,8 @@
     "data_type": "int",
     "info": "control dynamic sample level",
     "flags": "Global | SESSION | NEED_SERIALIZE",
+    "min_val": "0",
+    "max_val": "2",
     "publish_version": "",
     "info_cn": "",
     "background_cn": "",

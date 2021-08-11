@@ -1885,7 +1885,7 @@ OB_INLINE int ObBasicSessionInfo::process_session_variable(
     case SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL: {
       int64_t int_val = 0;
       OZ(val.get_int(int_val), val);
-      OX(sys_vars_cache_.set_ob_dynamic_sample_level(int_val != 0, is_inc));
+      OX(sys_vars_cache_.set_ob_dynamic_sample_level(int_val, is_inc));
       break;
     }
     case SYS_VAR_OB_ORG_CLUSTER_ID: {
@@ -3593,7 +3593,7 @@ int ObBasicSessionInfo::is_sys_var_actully_changed(
       case SYS_VAR_OB_ENABLE_SQL_AUDIT:
       case SYS_VAR_AUTOCOMMIT:
       case SYS_VAR_OB_ENABLE_TRACE_LOG:
-      case SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL_:
+      case SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL:
       case SYS_VAR_OB_ORG_CLUSTER_ID:
       case SYS_VAR_OB_QUERY_TIMEOUT:
       case SYS_VAR_OB_TRX_TIMEOUT:

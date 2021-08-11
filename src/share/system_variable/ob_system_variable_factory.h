@@ -2634,9 +2634,9 @@ public:
     return ObSysVariables::get_default_value(193);
   }
 };
-class ObSysVarObEnableDynamicSample : public ObBoolSysVar {
+class ObSysVarObDynamicSampleLevel : public ObIntSysVar {
   public:
-  ObSysVarObEnableDynamicSample() : ObBoolSysVar(NULL, NULL, NULL, NULL, NULL)
+  ObSysVarObDynamicSampleLevel() : ObIntSysVar(NULL, NULL, NULL, NULL, NULL)
   {}
   inline virtual ObSysVarClassType get_type() const
   {

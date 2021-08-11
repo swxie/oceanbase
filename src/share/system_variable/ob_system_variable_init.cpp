@@ -2281,6 +2281,8 @@ static struct VarsInit {
     ObSysVars[194].name_ = "ob_dynamic_sample_level";
     ObSysVars[194].data_type_ = ObIntType;
     ObSysVars[194].value_ = "0";
+    ObSysVars[194].min_val_ = "0";
+    ObSysVars[194].max_val_ = "2";
     ObSysVars[194].flags_ = ObSysVarFlag::GLOBAL_SCOPE | ObSysVarFlag::SESSION_SCOPE | ObSysVarFlag::NEED_SERIALIZE;
     ObSysVars[194].id_ = SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL;
     cur_max_var_id = MAX(cur_max_var_id, static_cast<int64_t>(SYS_VAR_OB_DYNAMIC_SAMPLE_LEVEL));
