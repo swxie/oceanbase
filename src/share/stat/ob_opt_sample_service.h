@@ -141,7 +141,7 @@ class ObOptSampleService {
 
   //内部接口-取数
 
-  int fetch_dynamic_stat(ObSqlString& sql, double& selectivity);
+  int fetch_dynamic_stat(ObSqlString& sql, double& selectivity, double row_count);
 
   int fetch_dynamic_stat(ObSqlString& sql, double& selectivity, double left_row_count, double right_row_count);
 

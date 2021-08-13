@@ -125,11 +125,11 @@ int ObOptSampleService::get_single_table_selectivity(
           double result_1 = 0, result_2 = 0;
           ObSqlString query;
           if (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, 1, query)) ||
-              OB_FAIL(fetch_dynamic_stat(query, result_1))) {
+              OB_FAIL(fetch_dynamic_stat(query, result_1, count * percent / 100.0))) {
             LOG_WARN("fail to sample first time", K(ret));
           } else if (percent < 100 &&
                      (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, 2, query)) ||
-                         OB_FAIL(fetch_dynamic_stat(query, result_2)))) {
+                         OB_FAIL(fetch_dynamic_stat(query, result_2, count * percent / 100.0)))) {
             LOG_WARN("fail to sample second time", K(ret));
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
@@ -138,7 +138,7 @@ int ObOptSampleService::get_single_table_selectivity(
               percent *= 2;
               seed++;
               if (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, seed, query)) ||
-                  OB_FAIL(fetch_dynamic_stat(query, selectivity))) {
+                  OB_FAIL(fetch_dynamic_stat(query, selectivity, count * percent / 100.0))) {
                 LOG_WARN("failed to sample", K(ret));
               }
             }
@@ -149,164 +149,7 @@ int ObOptSampleService::get_single_table_selectivity(
   }
   if (ret == OB_SUCCESS) {
     selectivity_output = selectivity;  //成功时赋值
-    LOG_WARN("yingnan debug 1", K(selectivity), K(selectivity_output));
-  }
-  return ret;
-}
-
-int ObOptSampleService::print_where_clause(const ObIArray<sql::ObRawExpr*>& input_quals, const sql::ParamStore* params,
-    sql::ObRawExprFactory& expr_factory, ObSqlString& output)
-{
-  int ret = OB_SUCCESS;
-  for (int i = 0; i < input_quals.count(); i++) {
-    ObRawExpr* print_qual;
-    char where_buffer[1000];                                   //缓冲区，用于读取where从句
-    int64_t pos_where = 0;                                     //缓冲区的结束位置
-    ObRawExprPrinter printer(where_buffer, 1000, &pos_where);  // where从句打印
-    if (OB_FAIL(
-            ObRawExprUtils::copy_expr(expr_factory, input_quals.at(i), print_qual, COPY_REF_DEFAULT))) {  //深拷贝qual
-      LOG_WARN("failed to copy raw expr", K(ret));
-    } else if (OB_FAIL(calc_const_expr(print_qual, params, expr_factory))) {
-      LOG_WARN("failed to calc const expr", K(ret));
-    } else if (OB_FAIL(printer.do_print(print_qual, T_WHERE_SCOPE))) {
-      LOG_WARN("failed to get where clause", K(ret));
-    }
-    if (ret == OB_SUCCESS) {
-      if (i == 0)
-        output.append_fmt("%.*s", static_cast<int>(pos_where), where_buffer);
-      else
-        output.append_fmt(" and %.*s", static_cast<int>(pos_where), where_buffer);
-    } else
-      break;
-  }
-  return ret;
-}
-
-int ObOptSampleService::calc_const_expr(ObRawExpr*& expr, const ParamStore* params, ObRawExprFactory& expr_factory)
-{
-  int ret = OB_SUCCESS;
-  const ObConstRawExpr* const_expr = NULL;
-  ObObj obj;
-  bool need_check = false;
-  if (OB_ISNULL(expr) || OB_ISNULL(params)) {
-    ret = OB_INVALID_ARGUMENT;
-    SQL_LOG(WARN, "Input arguments error", K(expr), K(params), K(ret));
-  } else if (expr->is_const_expr()) {
-    const_expr = static_cast<const ObConstRawExpr*>(expr);
-    if (T_QUESTIONMARK == const_expr->get_expr_type() && const_expr->has_flag(IS_EXEC_PARAM)) {
-      ret = OB_ERROR;
-      LOG_INFO("don't use dynamic sample on exec param", K(ret));
-    } else if (T_QUESTIONMARK == const_expr->get_expr_type()) {
-      if (OB_FAIL(ObSQLUtils::get_param_value(const_expr->get_value(), *params, obj, need_check)))
-        LOG_WARN("get param value error", K(ret));
-      else {
-        ObConstRawExpr* c_expr = NULL;
-        if (OB_FAIL(expr_factory.create_raw_expr(static_cast<ObItemType>(obj.get_type()), c_expr))) {
-          LOG_WARN("fail to create raw expr", K(ret));
-        } else {
-          c_expr->set_value(obj);
-          expr = c_expr;
-        }
-      }
-    }
-  } else {
-    int64_t num = expr->get_param_count();
-    for (int64_t idx = 0; OB_SUCC(ret) && idx < num; ++idx) {
-      if (OB_FAIL(calc_const_expr(expr->get_param_expr(idx), params, expr_factory))) {
-        // do nothing
-      }
-    }
-  }
-  return ret;
-}
-
-int ObOptSampleService::generate_single_table_innersql(
-    const sql::TableItem* cur_table_item, const ObSqlString& where_clause, double percent, int seed, ObSqlString& sql)
-{
-  int ret = OB_SUCCESS;
-  sql.reset();
-  const ObString where_string = where_clause.string();
-  sql.append_fmt("select (count(case when (%.*s) then 1 else null end)/count(*)) as result from ",
-      where_string.length(),
-      where_string.ptr());
-  ObString database_name = cur_table_item->database_name_;
-  if (percent < 100)
-    sql.append_fmt("%.*s.%.*s sample(%f) seed(%d)",
-        database_name.length(),
-        database_name.ptr(),
-        cur_table_item->table_name_.length(),
-        cur_table_item->table_name_.ptr(),
-        percent,
-        seed);
-  else
-    sql.append_fmt("%.*s.%.*s",
-        database_name.length(),
-        database_name.ptr(),
-        cur_table_item->table_name_.length(),
-        cur_table_item->table_name_.ptr());
-  if (!cur_table_item->alias_name_.empty()) {
-    sql.append(" ");
-    sql.append(cur_table_item->alias_name_);
-  }
-  sql.append(";");
-  return ret;
-}
-
-int ObOptSampleService::fetch_dynamic_stat(ObSqlString& sql, double& selectivity)
-{
-  int ret = OB_SUCCESS;
-  int64_t index = 0;
-  ObStringSelPair target_pair(sql.string(), 0.0);
-  if (has_exist_in_array(cache_, target_pair, &index)) {
-    selectivity = cache_.at(index).sel_;
-  } else {
-    DEFINE_SQL_CLIENT_RETRY_WEAK_FOR_STAT(mysql_proxy_);
-    SMART_VAR(ObMySQLProxy::MySQLResult, res)
-    {
-      sqlclient::ObMySQLResult* result = NULL;
-      if (OB_FAIL(sql_client_retry_weak.read(res, tenant_id_, sql.ptr()))) {
-        COMMON_LOG(WARN, "execute sql failed", "sql", sql.ptr(), K(ret));
-      } else if (NULL == (result = res.get_result())) {
-        ret = OB_ERR_UNEXPECTED;
-        COMMON_LOG(WARN, "fail to execute ", "sql", sql.ptr(), K(ret));
-      } else if (OB_FAIL(result->next())) {
-        if (OB_ITER_END != ret) {
-          COMMON_LOG(WARN, "result next failed, ", K(ret));
-        } else {
-          ret = OB_ENTRY_NOT_EXIST;
-        }
-      } else {
-        number::ObNumber src_val;
-        EXTRACT_NUMBER_FIELD_MYSQL(*result, result, src_val);
-        if (OB_FAIL(cast_number_to_double(src_val, selectivity))) {
-          LOG_WARN("Failed to cast number to double");
-        } else {
-          target_pair.sel_ = selectivity;
-        }
-        if (OB_FAIL(add_var_to_array_no_dup(cache_, target_pair))) {
-          LOG_WARN("fail to load selectiviti into cache_", K(ret));
-        } else {
-          // do nothing
-          LOG_WARN("yingnan debug", K(sql), K(selectivity));
-        }
-      }
-    }
-  }
-  return ret;
-}
-
-int ObOptSampleService::cast_number_to_double(const number::ObNumber& src_val, double& dst_val)
-{
-  int ret = OB_SUCCESS;
-  ObObj src_obj;
-  ObObj dest_obj;
-  src_obj.set_number(src_val);
-  ObArenaAllocator calc_buf(ObModIds::OB_SQL_PARSER);
-  ObCastCtx cast_ctx(&calc_buf, NULL, CM_NONE, ObCharset::get_system_collation());
-  if (OB_FAIL(ObObjCaster::to_type(ObDoubleType, cast_ctx, src_obj, dest_obj))) {
-    LOG_WARN("failed to cast number to double type", K(ret));
-  } else if (OB_FAIL(dest_obj.get_double(dst_val))) {
-    LOG_WARN("failed to get double", K(ret));
+    LOG_TRACE("succeed to dynamic sample", K(selectivity), K(selectivity_output));
   }
   return ret;
 }
@@ -432,8 +275,104 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
   }
   if (ret == OB_SUCCESS) {
     selectivity_output = selectivity;  //成功时赋值
-    LOG_WARN("yingnan debug 1", K(selectivity), K(selectivity_output));
+    LOG_TRACE("succeed to dynamic sample", K(selectivity), K(selectivity_output));
   }
+  return ret;
+}
+
+int ObOptSampleService::print_where_clause(const ObIArray<sql::ObRawExpr*>& input_quals, const sql::ParamStore* params,
+    sql::ObRawExprFactory& expr_factory, ObSqlString& output)
+{
+  int ret = OB_SUCCESS;
+  for (int i = 0; i < input_quals.count(); i++) {
+    ObRawExpr* print_qual;
+    char where_buffer[1000];                                   //缓冲区，用于读取where从句
+    int64_t pos_where = 0;                                     //缓冲区的结束位置
+    ObRawExprPrinter printer(where_buffer, 1000, &pos_where);  // where从句打印
+    if (OB_FAIL(
+            ObRawExprUtils::copy_expr(expr_factory, input_quals.at(i), print_qual, COPY_REF_DEFAULT))) {  //深拷贝qual
+      LOG_WARN("failed to copy raw expr", K(ret));
+    } else if (OB_FAIL(calc_const_expr(print_qual, params, expr_factory))) {
+      LOG_WARN("failed to calc const expr", K(ret));
+    } else if (OB_FAIL(printer.do_print(print_qual, T_WHERE_SCOPE))) {
+      LOG_WARN("failed to get where clause", K(ret));
+    }
+    if (ret == OB_SUCCESS) {
+      if (i == 0)
+        output.append_fmt("%.*s", static_cast<int>(pos_where), where_buffer);
+      else
+        output.append_fmt(" and %.*s", static_cast<int>(pos_where), where_buffer);
+    } else
+      break;
+  }
+  return ret;
+}
+
+int ObOptSampleService::calc_const_expr(ObRawExpr*& expr, const ParamStore* params, ObRawExprFactory& expr_factory)
+{
+  int ret = OB_SUCCESS;
+  const ObConstRawExpr* const_expr = NULL;
+  ObObj obj;
+  bool need_check = false;
+  if (OB_ISNULL(expr) || OB_ISNULL(params)) {
+    ret = OB_INVALID_ARGUMENT;
+    SQL_LOG(WARN, "Input arguments error", K(expr), K(params), K(ret));
+  } else if (expr->is_const_expr()) {
+    const_expr = static_cast<const ObConstRawExpr*>(expr);
+    if (T_QUESTIONMARK == const_expr->get_expr_type() && const_expr->has_flag(IS_EXEC_PARAM)) {
+      ret = OB_ERROR;
+      LOG_INFO("don't use dynamic sample on exec param", K(ret));
+    } else if (T_QUESTIONMARK == const_expr->get_expr_type()) {
+      if (OB_FAIL(ObSQLUtils::get_param_value(const_expr->get_value(), *params, obj, need_check)))
+        LOG_WARN("get param value error", K(ret));
+      else {
+        ObConstRawExpr* c_expr = NULL;
+        if (OB_FAIL(expr_factory.create_raw_expr(static_cast<ObItemType>(obj.get_type()), c_expr))) {
+          LOG_WARN("fail to create raw expr", K(ret));
+        } else {
+          c_expr->set_value(obj);
+          expr = c_expr;
+        }
+      }
+    }
+  } else {
+    int64_t num = expr->get_param_count();
+    for (int64_t idx = 0; OB_SUCC(ret) && idx < num; ++idx) {
+      if (OB_FAIL(calc_const_expr(expr->get_param_expr(idx), params, expr_factory))) {
+        // do nothing
+      }
+    }
+  }
+  return ret;
+}
+
+int ObOptSampleService::generate_single_table_innersql(
+    const sql::TableItem* cur_table_item, const ObSqlString& where_clause, double percent, int seed, ObSqlString& sql)
+{
+  int ret = OB_SUCCESS;
+  sql.reset();
+  sql.append("select count(*) as result from ");
+  ObString database_name = cur_table_item->database_name_;
+  if (percent < 100)
+    sql.append_fmt("%.*s.%.*s sample(%f) seed(%d)",
+        database_name.length(),
+        database_name.ptr(),
+        cur_table_item->table_name_.length(),
+        cur_table_item->table_name_.ptr(),
+        percent,
+        seed);
+  else
+    sql.append_fmt("%.*s.%.*s",
+        database_name.length(),
+        database_name.ptr(),
+        cur_table_item->table_name_.length(),
+        cur_table_item->table_name_.ptr());
+  if (!cur_table_item->alias_name_.empty()) {
+    sql.append(" ");
+    sql.append(cur_table_item->alias_name_);
+  }
+  const ObString where_string = where_clause.string();
+  sql.append_fmt(" where %.*s;", where_string.length(), where_string.ptr());
   return ret;
 }
 
@@ -474,6 +413,46 @@ int ObOptSampleService::generate_join_table_innersql(const ObSEArray<TableItem*,
   return ret;
 }
 
+int ObOptSampleService::fetch_dynamic_stat(ObSqlString& sql, double& selectivity, double row_count)
+{
+  int ret = OB_SUCCESS;
+  int64_t index = 0;
+  ObStringSelPair target_pair(sql.string(), 0.0);
+  if (has_exist_in_array(cache_, target_pair, &index)) {
+    selectivity = cache_.at(index).sel_;
+  } else {
+    DEFINE_SQL_CLIENT_RETRY_WEAK_FOR_STAT(mysql_proxy_);
+    SMART_VAR(ObMySQLProxy::MySQLResult, res)
+    {
+      sqlclient::ObMySQLResult* result = NULL;
+      if (OB_FAIL(sql_client_retry_weak.read(res, tenant_id_, sql.ptr()))) {
+        COMMON_LOG(WARN, "execute sql failed", "sql", sql.ptr(), K(ret));
+      } else if (NULL == (result = res.get_result())) {
+        ret = OB_ERR_UNEXPECTED;
+        COMMON_LOG(WARN, "fail to execute ", "sql", sql.ptr(), K(ret));
+      } else if (OB_FAIL(result->next())) {
+        if (OB_ITER_END != ret) {
+          COMMON_LOG(WARN, "result next failed, ", K(ret));
+        } else {
+          ret = OB_ENTRY_NOT_EXIST;
+        }
+      } else {
+        int src_val = 0;
+        EXTRACT_INT_FIELD_MYSQL(*result, "result", src_val, int);
+        target_pair.sel_ = static_cast<double>(src_val) / row_count;
+        selectivity = target_pair.sel_;
+        if (OB_FAIL(add_var_to_array_no_dup(cache_, target_pair))) {
+          LOG_WARN("fail to load selectiviti into cache_", K(ret));
+        } else {
+          // do nothing
+          LOG_TRACE("succeed to fetch dynamic sample data", K(sql), K(selectivity));
+        }
+      }
+    }
+  }
+  return ret;
+}
+
 int ObOptSampleService::fetch_dynamic_stat(
     ObSqlString& sql, double& selectivity, double left_row_count, double right_row_count)
 {
@@ -506,10 +485,26 @@ int ObOptSampleService::fetch_dynamic_stat(
         if (OB_FAIL(add_var_to_array_no_dup(cache_, target_pair))) {
           LOG_WARN("fail to load selectiviti into cache_", K(ret));
         } else {
-          LOG_WARN("yingnan debug", K(sql), K(selectivity));
+          LOG_TRACE("succeed to fetch dynamic stat", K(sql), K(selectivity));
         }
       }
     }
+  }
+  return ret;
+}
+
+int ObOptSampleService::cast_number_to_double(const number::ObNumber& src_val, double& dst_val)
+{
+  int ret = OB_SUCCESS;
+  ObObj src_obj;
+  ObObj dest_obj;
+  src_obj.set_number(src_val);
+  ObArenaAllocator calc_buf(ObModIds::OB_SQL_PARSER);
+  ObCastCtx cast_ctx(&calc_buf, NULL, CM_NONE, ObCharset::get_system_collation());
+  if (OB_FAIL(ObObjCaster::to_type(ObDoubleType, cast_ctx, src_obj, dest_obj))) {
+    LOG_WARN("failed to cast number to double type", K(ret));
+  } else if (OB_FAIL(dest_obj.get_double(dst_val))) {
+    LOG_WARN("failed to get double", K(ret));
   }
   return ret;
 }
