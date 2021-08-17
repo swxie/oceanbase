@@ -148,7 +148,7 @@ int ObOptSampleService::get_single_table_selectivity(
     }
   }
   if (ret == OB_SUCCESS) {
-    selectivity_output = selectivity;  //成功时赋值
+    selectivity_output = selectivity;  //成功时赋值, 未freeze时会出大问题
     LOG_TRACE("succeed to dynamic sample", K(selectivity), K(selectivity_output));
   }
   return ret;
@@ -354,7 +354,7 @@ int ObOptSampleService::generate_single_table_innersql(
   sql.append("select count(*) as result from ");
   ObString database_name = cur_table_item->database_name_;
   if (percent < 100)
-    sql.append_fmt("%.*s.%.*s sample(%f) seed(%d)",
+    sql.append_fmt("%.*s.%.*s sample block(%f) seed(%d)",
         database_name.length(),
         database_name.ptr(),
         cur_table_item->table_name_.length(),
@@ -386,7 +386,7 @@ int ObOptSampleService::generate_join_table_innersql(const ObSEArray<TableItem*,
     TableItem* cur_table_item = cur_table_items.at(i);
     ObString database_name = cur_table_item->database_name_;
     if (i == index && percent < 100) {
-      sql.append_fmt("%.*s.%.*s sample(%f) seed(%d)",
+      sql.append_fmt("%.*s.%.*s sample block(%f) seed(%d)",
           database_name.length(),
           database_name.ptr(),
           cur_table_item->table_name_.length(),

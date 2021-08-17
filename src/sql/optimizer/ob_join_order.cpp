@@ -6188,13 +6188,17 @@ int ObJoinOrder::calc_join_output_rows(
 {
   int ret = OB_SUCCESS;
   double selectivity = 0;
+  const ObSQLSessionInfo* session = NULL;
   const ObRelIds& left_ids = left_tree.get_tables();
   const ObRelIds& right_ids = right_tree.get_tables();
 
   if (OB_ISNULL(get_plan()) || OB_ISNULL(join_info_)) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("get unexpected null", K(ret));
-  } else if (join_type == INNER_JOIN && left_ids.num_members() + right_ids.num_members() > 2) {
+  } else if (OB_UNLIKELY(OB_ISNULL(session = get_plan()->get_est_sel_info().get_session_info()))) {
+      ret = OB_ERR_NULL_VALUE;
+      LOG_WARN("get unexpected null", K(ret));
+  } else if (!session->is_inner() && session->get_local_ob_dynamic_sample_level() >= 1 && join_type == INNER_JOIN && left_ids.num_members() + right_ids.num_members() > 2) {
     if (OB_FAIL(plan_->get_relids_selectivity_from_cache(left_ids, right_ids, selectivity))) {
       LOG_WARN("failed to get sel from join sel cache", K(ret));
     } else {
