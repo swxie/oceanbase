@@ -134,8 +134,8 @@ int ObOptSampleService::get_single_table_selectivity(
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
             int seed = 2;
-            while (selectivity == 0 && percent < 16) {
-              percent *= 2;
+            while (selectivity == 0 && percent < 100) {
+              percent = percent * 2 > 100 ? 100 : percent * 2;
               seed++;
               if (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, seed, query)) ||
                   OB_FAIL(fetch_dynamic_stat(query, selectivity, count * percent / 100.0))) {
@@ -260,8 +260,8 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
             int seed = 2;
-            while (selectivity == 0 && percent < 16) {
-              percent *= 2;
+            while (selectivity == 0 && percent < 100) {
+              percent = percent * 2 > 100 ? 100 : percent * 2;
               seed++;
               if (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, seed, query)) ||
                   OB_FAIL(fetch_dynamic_stat(query, selectivity, left_row_count * percent / 100.0, right_row_count))) {
