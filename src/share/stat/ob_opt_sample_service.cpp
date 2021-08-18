@@ -140,6 +140,15 @@ int ObOptSampleService::get_single_table_selectivity(
               if (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, seed, query)) ||
                   OB_FAIL(fetch_dynamic_stat(query, selectivity, count * percent / 100.0))) {
                 LOG_WARN("failed to sample", K(ret));
+              } else if (selectivity > 0 && percent < 100){
+                seed++;
+                double temp_selectivity = 0.0;
+                if (OB_FAIL(generate_single_table_innersql(cur_table_item, where_clause, percent, seed, query)) ||
+                  OB_FAIL(fetch_dynamic_stat(query, temp_selectivity, count * percent / 100.0))) {
+                    LOG_WARN("failed to sample", K(ret));
+                } else {
+                  selectivity = (selectivity + temp_selectivity) / 2.0;
+                }
               }
             }
           }
@@ -266,6 +275,15 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
               if (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, seed, query)) ||
                   OB_FAIL(fetch_dynamic_stat(query, selectivity, left_row_count * percent / 100.0, right_row_count))) {
                 LOG_WARN("failed to sample", K(ret));
+              } else if (selectivity > 0 && percent < 100){
+                seed++;
+                double temp_selectivity = 0.0;
+                if (OB_FAIL(generate_join_table_innersql(cur_table_items, index, where_clause, percent, seed, query)) ||
+                  OB_FAIL(fetch_dynamic_stat(query, temp_selectivity, left_row_count * percent / 100.0, right_row_count))) {
+                    LOG_WARN("failed to sample", K(ret));
+                } else {
+                  selectivity = (selectivity + temp_selectivity) / 2.0;
+                }
               }
             }
           }
