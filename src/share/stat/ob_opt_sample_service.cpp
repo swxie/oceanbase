@@ -134,6 +134,8 @@ int ObOptSampleService::get_single_table_selectivity(
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
             int seed = 2;
+            if (percent < 100 && (result_1 == 0 || result_2 == 0))
+              selectivity = 0;
             while (selectivity == 0 && percent < 100) {
               percent = percent * 2 > 100 ? 100 : percent * 2;
               seed++;
@@ -158,7 +160,7 @@ int ObOptSampleService::get_single_table_selectivity(
   }
   if (ret == OB_SUCCESS) {
     selectivity_output = selectivity;  //成功时赋值, 未freeze时会出大问题
-    LOG_TRACE("succeed to dynamic sample", K(selectivity), K(selectivity_output));
+    LOG_TRACE("succeed to dynamic sample", K(selectivity));
   }
   return ret;
 }
@@ -268,6 +270,8 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
             LOG_WARN("fail to sample second time", K(ret));
           } else {
             selectivity = percent < 100 ? (result_1 + result_2) / 2 : result_1;
+            if (percent < 100 && (result_1 == 0 || result_2 == 0))
+              selectivity = 0;  
             int seed = 2;
             while (selectivity == 0 && percent < 100) {
               percent = percent * 2 > 100 ? 100 : percent * 2;
@@ -293,7 +297,7 @@ int ObOptSampleService::get_join_table_selectivity(const sql::ObEstSelInfo& est_
   }
   if (ret == OB_SUCCESS) {
     selectivity_output = selectivity;  //成功时赋值
-    LOG_TRACE("succeed to dynamic sample", K(selectivity), K(selectivity_output));
+    LOG_TRACE("succeed to dynamic sample", K(selectivity));
   }
   return ret;
 }
@@ -463,7 +467,7 @@ int ObOptSampleService::fetch_dynamic_stat(ObSqlString& sql, double& selectivity
           LOG_WARN("fail to load selectiviti into cache_", K(ret));
         } else {
           // do nothing
-          LOG_TRACE("succeed to fetch dynamic sample data", K(sql), K(selectivity));
+          LOG_WARN("yingnan debug succeed to fetch dynamic sample data", K(sql), K(selectivity));
         }
       }
     }
@@ -503,7 +507,7 @@ int ObOptSampleService::fetch_dynamic_stat(
         if (OB_FAIL(add_var_to_array_no_dup(cache_, target_pair))) {
           LOG_WARN("fail to load selectiviti into cache_", K(ret));
         } else {
-          LOG_TRACE("succeed to fetch dynamic stat", K(sql), K(selectivity));
+          LOG_WARN("yingnan debug succeed to fetch dynamic stat", K(sql), K(selectivity));
         }
       }
     }
